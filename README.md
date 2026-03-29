@@ -17,3 +17,26 @@ La stack retenue pour le cadrage initial est :
 - `SQLite` pour le stockage local
 
 Le cadrage produit et technique détaillé est dans `docs/project-blueprint.md`.
+
+## Workspace
+
+- `apps/desktop`
+  application React + Tauri
+- `apps/desktop/src-tauri`
+  shell desktop et commandes Rust
+- `crates/*`
+  crates Rust du domaine, de la persistence, des stats et du tracking
+
+## Prerequisites
+
+- `Node.js 22+`
+- `Rust` via `rustup`
+- Windows : `Visual Studio Build Tools 2022` avec le workload C++
+- Linux : pre-requis Tauri/WebKitGTK documentes dans la CI
+
+## Commandes utiles
+
+- `corepack pnpm install`
+- `corepack pnpm dev`
+- `corepack pnpm check`
+- `corepack pnpm build:desktop`

@@ -1,0 +1,22 @@
+{
+  "name": "focus-time",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev": "corepack pnpm --filter @focus-time/desktop tauri:dev",
+    "dev:web": "corepack pnpm --filter @focus-time/desktop dev",
+    "check": "corepack pnpm lint && corepack pnpm test && corepack pnpm typecheck",
+    "build": "corepack pnpm build:web && cargo build --workspace",
+    "build:web": "corepack pnpm --filter @focus-time/desktop build",
+    "build:desktop": "corepack pnpm --filter @focus-time/desktop tauri:build",
+    "build:desktop:smoke": "corepack pnpm --filter @focus-time/desktop tauri:build:smoke",
+    "lint": "corepack pnpm lint:web && cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings",
+    "lint:web": "corepack pnpm --filter @focus-time/desktop lint",
+    "test": "corepack pnpm test:web && cargo test --workspace",
+    "test:web": "corepack pnpm --filter @focus-time/desktop test",
+    "typecheck": "corepack pnpm --filter @focus-time/desktop typecheck",
+    "format": "corepack pnpm format:web && cargo fmt --all",
+    "format:web": "corepack pnpm --filter @focus-time/desktop format"
+  }
+}

@@ -214,12 +214,12 @@ Entites minimales a prevoir :
 
 ### Epic 0 - Fondation du projet
 
-- [ ] Initialiser le workspace frontend avec `pnpm`, `Vite`, `React`, `TypeScript`.
-- [ ] Initialiser l'application desktop Tauri v2 dans `apps/desktop`.
-- [ ] Configurer le workspace Rust pour connecter `src-tauri` et `crates/*`.
-- [ ] Installer la chaine qualite minimale : `eslint`, `prettier`, `vitest`, `cargo fmt`, `clippy`.
-- [ ] Configurer les scripts de dev, build, test et lint a la racine.
-- [ ] Mettre en place une CI simple sur GitHub Actions pour verifier frontend et Rust.
+- [x] Initialiser le workspace frontend avec `pnpm`, `Vite`, `React`, `TypeScript`.
+- [x] Initialiser l'application desktop Tauri v2 dans `apps/desktop`.
+- [x] Configurer le workspace Rust pour connecter `src-tauri` et `crates/*`.
+- [x] Installer la chaine qualite minimale : `eslint`, `prettier`, `vitest`, `cargo fmt`, `clippy`.
+- [x] Configurer les scripts de dev, build, test et lint a la racine.
+- [x] Mettre en place une CI simple sur GitHub Actions pour verifier frontend et Rust.
 
 Definition de fini :
 
@@ -334,19 +334,7 @@ Definition de fini :
 
 - une beta installable peut etre partagee
 
-## 12. Ordre de realisation recommande
-
-1. Epic 0
-2. Epic 1
-3. Epic 2
-4. Epic 3
-5. Epic 4
-6. Epic 5
-7. Epic 6
-8. Epic 7
-9. Epic 8
-
-## 13. Premiere version raisonnable
+## 12. Premiere version raisonnable
 
 La meilleure premiere release n'est pas "tout".
 
@@ -366,7 +354,7 @@ Ce qui peut attendre :
 - categories intelligentes automatiques
 - coaching ou recommandations
 
-## 14. Conclusion
+## 13. Conclusion
 
 Pour Focus Time, le meilleur compromis est :
 

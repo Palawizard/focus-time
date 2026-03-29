@@ -1,0 +1,24 @@
+[package]
+name = "focus-time-desktop"
+version.workspace = true
+description = "Focus Time desktop application"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "focus_time_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tauri.workspace = true
+focus-domain = { path = "../../../crates/focus-domain" }
+focus-persistence = { path = "../../../crates/focus-persistence" }
+focus-stats = { path = "../../../crates/focus-stats" }
+focus-tracking = { path = "../../../crates/focus-tracking" }
