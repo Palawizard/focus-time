@@ -19,6 +19,7 @@ Ces regles s'appliquent a toute la suite du projet.
 ## 3. Workflow Git par epic
 
 - Au debut de chaque epic, creer une branche dediee avant de commencer le travail.
+- Les noms de branche doivent etre conventionnels, par exemple `feat/...`, `fix/...`, `chore/...`, suivis d'un nom explicite.
 - Faire un commit par element de la roadmap quand cet element est termine.
 - Ne pas merger automatiquement dans `dev` a la fin d'un epic.
 - Attendre une validation explicite de l'utilisateur avant de merger la branche de l'epic dans `dev`.
