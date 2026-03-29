@@ -229,7 +229,7 @@ Definition de fini :
 
 ### Epic 1 - Design system et shell applicatif
 
-- [ ] Definir les tokens visuels : couleurs, surfaces, typographie, espacements, ombres.
+- [x] Definir les tokens visuels : couleurs, surfaces, typographie, espacements, ombres.
 - [ ] Mettre en place le layout principal avec sidebar ou navigation compacte.
 - [ ] Integrer `Radix UI` et creer les primitives de base : button, card, dialog, tabs, tooltip.
 - [ ] Creer les ecrans vides : Focus, History, Stats, Tracker, Gamification, Settings.
