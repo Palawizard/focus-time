@@ -1,5 +1,28 @@
 import { useQuery } from "@tanstack/react-query";
 
+import { Button } from "../components/ui/Button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/Card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../components/ui/Dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/Tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../components/ui/Tooltip";
 import { DesktopShell } from "./DesktopShell";
 import { getRuntimeHealth } from "../lib/tauri";
 
@@ -16,7 +39,8 @@ export function AppShell() {
   });
 
   return (
-    <DesktopShell>
+    <TooltipProvider delayDuration={100}>
+      <DesktopShell>
       <section className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4 sm:px-6">
         <div>
           <p className="ft-kicker text-[11px] font-semibold">Aujourd&apos;hui</p>
@@ -25,8 +49,37 @@ export function AppShell() {
           </h2>
         </div>
 
-        <div className="ft-panel-muted px-4 py-2 text-sm">
-          Pret a demarrer
+        <div className="flex items-center gap-3">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="ft-panel-muted px-4 py-2 text-sm">
+                Pret a demarrer
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>Tout est pret pour une nouvelle session.</TooltipContent>
+          </Tooltip>
+
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button>Nouvelle session</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className="ft-font-display text-2xl font-semibold">
+                  Nouvelle session
+                </DialogTitle>
+                <DialogDescription className="ft-text-muted text-sm">
+                  Choisis une duree et lance ton prochain focus.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                <Button variant="secondary">25 min</Button>
+                <Button variant="secondary">45 min</Button>
+                <Button variant="secondary">60 min</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </section>
 
@@ -42,76 +95,93 @@ export function AppShell() {
             </p>
           </div>
 
-          <div className="ft-panel p-5">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-medium">Etat</h2>
-            </div>
-
-            {runtimeHealth.isLoading ? (
-              <p className="ft-text-muted text-sm">Preparation en cours...</p>
-            ) : runtimeHealth.isError ? (
-              <p className="text-sm text-[var(--color-danger)]">
-                Impossible de charger l&apos;application.
-              </p>
-            ) : (
-              <dl className="space-y-3 text-sm">
-                <div className="flex justify-between gap-4">
-                  <dt className="ft-text-soft">Application</dt>
-                  <dd>{runtimeHealth.data.productName}</dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="ft-text-soft">Suivi</dt>
-                  <dd className="ft-brand-badge rounded-full px-2.5 py-1 text-xs font-medium">
-                    Pret
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="ft-text-soft">Plateforme</dt>
-                  <dd>{runtimeHealth.data.platform}</dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="ft-text-soft">Stockage</dt>
-                  <dd>Local</dd>
-                </div>
-              </dl>
-            )}
-          </div>
+          <Card className="ft-panel p-5">
+            <CardHeader>
+              <CardDescription>Etat</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {runtimeHealth.isLoading ? (
+                <p className="ft-text-muted text-sm">Preparation en cours...</p>
+              ) : runtimeHealth.isError ? (
+                <p className="text-sm text-[var(--color-danger)]">
+                  Impossible de charger l&apos;application.
+                </p>
+              ) : (
+                <dl className="space-y-3 text-sm">
+                  <div className="flex justify-between gap-4">
+                    <dt className="ft-text-soft">Application</dt>
+                    <dd>{runtimeHealth.data.productName}</dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="ft-text-soft">Suivi</dt>
+                    <dd className="ft-brand-badge rounded-full px-2.5 py-1 text-xs font-medium">
+                      Pret
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="ft-text-soft">Plateforme</dt>
+                    <dd>{runtimeHealth.data.platform}</dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="ft-text-soft">Stockage</dt>
+                    <dd>Local</dd>
+                  </div>
+                </dl>
+              )}
+            </CardContent>
+          </Card>
         </header>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {focusStats.map((item) => (
-            <article key={item.label} className="ft-panel-muted p-5">
-              <p className="ft-text-muted text-sm">{item.label}</p>
-              <h2 className="ft-font-display mt-3 text-2xl font-medium">
-                {item.value}
-              </h2>
-            </article>
+            <Card key={item.label}>
+              <CardDescription>{item.label}</CardDescription>
+              <CardTitle className="mt-3">{item.value}</CardTitle>
+            </Card>
           ))}
 
-          <article className="ft-panel-muted p-5">
-            <p className="ft-text-muted text-sm">Top app</p>
-            <h2 className="ft-font-display mt-3 text-2xl font-medium">
-              Aucune
-            </h2>
-          </article>
+          <Card>
+            <CardDescription>Top app</CardDescription>
+            <CardTitle className="mt-3">Aucune</CardTitle>
+          </Card>
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,1fr)]">
-          <article className="ft-panel p-6">
-            <h2 className="text-lg font-medium">Session</h2>
-            <p className="ft-text-muted mt-3 text-sm leading-7">
-              Aucune session en cours.
-            </p>
-          </article>
+        <Tabs defaultValue="session" className="grid gap-4">
+          <TabsList>
+            <TabsTrigger value="session">Session</TabsTrigger>
+            <TabsTrigger value="apps">Applications</TabsTrigger>
+          </TabsList>
 
-          <article className="ft-panel p-6">
-            <h2 className="text-lg font-medium">Applications</h2>
-            <ul className="ft-text-muted mt-3 space-y-2 text-sm">
-              <li>Le suivi apparaitra ici pendant les sessions.</li>
-            </ul>
-          </article>
-        </section>
+          <TabsContent
+            value="session"
+            className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,1fr)]"
+          >
+            <Card className="ft-panel p-6">
+              <CardHeader>
+                <CardDescription>Session</CardDescription>
+                <CardTitle>Aucune session en cours.</CardTitle>
+              </CardHeader>
+            </Card>
+
+            <Card className="ft-panel p-6">
+              <CardHeader>
+                <CardDescription>Pause suivante</CardDescription>
+                <CardTitle>25 min</CardTitle>
+              </CardHeader>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="apps">
+            <Card className="ft-panel p-6">
+              <CardHeader>
+                <CardDescription>Applications</CardDescription>
+                <CardTitle>Le suivi apparaitra ici.</CardTitle>
+              </CardHeader>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </section>
-    </DesktopShell>
+      </DesktopShell>
+    </TooltipProvider>
   );
 }
