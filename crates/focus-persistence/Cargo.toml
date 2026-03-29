@@ -6,6 +6,8 @@ license.workspace = true
 authors.workspace = true
 
 [dependencies]
+chrono.workspace = true
+focus-domain = { path = "../focus-domain" }
 serde.workspace = true
 sqlx.workspace = true
 thiserror.workspace = true
