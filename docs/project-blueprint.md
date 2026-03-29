@@ -257,7 +257,7 @@ Definition de fini :
 
 ### Epic 3 - Moteur Pomodoro
 
-- [ ] Modeliser presets, session active, pause, reprise, annulation, completion.
+- [x] Modeliser presets, session active, pause, reprise, annulation, completion.
 - [ ] Construire le moteur de timer cote Rust pour eviter les derives de timing.
 - [ ] Exposer les commandes start, pause, resume, stop, skip-break.
 - [ ] Synchroniser l'etat du timer avec le front.
