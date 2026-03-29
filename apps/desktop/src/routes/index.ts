@@ -1,5 +1,1 @@
-export const bootstrapRoute = {
-  id: "focus",
-  label: "Focus",
-  description: "Vue principale de concentration",
-} as const;
+export { AppShell } from "../app/AppShell";

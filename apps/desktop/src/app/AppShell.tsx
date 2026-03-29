@@ -1,13 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
+import { AppWindow, ChartColumnBig, History, SlidersHorizontal, TimerReset, Trophy } from "lucide-react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { Button } from "../components/ui/Button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/Card";
 import {
   Dialog,
   DialogContent,
@@ -16,23 +11,89 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../components/ui/Dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/Tabs";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "../components/ui/Tooltip";
-import { DesktopShell } from "./DesktopShell";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/Tooltip";
+import { GamificationScreen } from "../features/gamification/GamificationScreen";
+import { HistoryScreen } from "../features/history/HistoryScreen";
+import { FocusScreen } from "../features/pomodoro/FocusScreen";
+import { SettingsScreen } from "../features/settings/SettingsScreen";
+import { StatsScreen } from "../features/stats/StatsScreen";
+import { TrackerScreen } from "../features/tracking/TrackerScreen";
 import { getRuntimeHealth } from "../lib/tauri";
+import { DesktopShell, type ShellRouteItem } from "./DesktopShell";
 
-const focusStats = [
-  { label: "Aujourd'hui", value: "0 min" },
-  { label: "Sessions", value: "0" },
-  { label: "Serie", value: "0 jour" },
-] as const;
+const routes: Array<
+  ShellRouteItem & {
+    description: string;
+    element: React.ReactNode;
+    eyebrow: string;
+    title: string;
+  }
+> = [
+  {
+    path: "/",
+    label: "Focus",
+    title: "Vue d'ensemble",
+    eyebrow: "Aujourd'hui",
+    description: "Reste sur l'essentiel et demarre rapidement.",
+    icon: TimerReset,
+    element: <FocusScreen />,
+  },
+  {
+    path: "/history",
+    label: "History",
+    title: "Historique",
+    eyebrow: "Sessions",
+    description: "Retrouve tes sessions et leur duree.",
+    icon: History,
+    element: <HistoryScreen />,
+  },
+  {
+    path: "/stats",
+    label: "Stats",
+    title: "Statistiques",
+    eyebrow: "Analyse",
+    description: "Observe les tendances et le temps passe.",
+    icon: ChartColumnBig,
+    element: <StatsScreen />,
+  },
+  {
+    path: "/tracker",
+    label: "Tracker",
+    title: "Tracker",
+    eyebrow: "Applications",
+    description: "Visualise les apps suivies pendant tes sessions.",
+    icon: AppWindow,
+    element: <TrackerScreen />,
+  },
+  {
+    path: "/gamification",
+    label: "Gamification",
+    title: "Progression",
+    eyebrow: "Regularite",
+    description: "Suis ta serie et tes objectifs.",
+    icon: Trophy,
+    element: <GamificationScreen />,
+  },
+  {
+    path: "/settings",
+    label: "Settings",
+    title: "Preferences",
+    eyebrow: "Configuration",
+    description: "Ajuste les presets et les comportements de l'app.",
+    icon: SlidersHorizontal,
+    element: <SettingsScreen />,
+  },
+];
 
-export function AppShell() {
+function AppShellFrame() {
+  const location = useLocation();
+  const activeRoute =
+    routes.find((route) =>
+      route.path === "/"
+        ? location.pathname === "/"
+        : location.pathname.startsWith(route.path),
+    ) ?? routes[0];
+
   const runtimeHealth = useQuery({
     queryKey: ["runtime-health"],
     queryFn: getRuntimeHealth,
@@ -40,148 +101,59 @@ export function AppShell() {
 
   return (
     <TooltipProvider delayDuration={100}>
-      <DesktopShell>
-      <section className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4 sm:px-6">
-        <div>
-          <p className="ft-kicker text-[11px] font-semibold">Aujourd&apos;hui</p>
-          <h2 className="ft-font-display mt-2 text-2xl font-semibold tracking-tight">
-            Vue d&apos;ensemble
-          </h2>
-        </div>
+      <DesktopShell
+        actions={
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="ft-panel-muted px-4 py-2 text-sm">
+                  {runtimeHealth.isError ? "Indisponible" : "Local"}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>Les donnees restent sur cette machine.</TooltipContent>
+            </Tooltip>
 
-        <div className="flex items-center gap-3">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="ft-panel-muted px-4 py-2 text-sm">
-                Pret a demarrer
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>Tout est pret pour une nouvelle session.</TooltipContent>
-          </Tooltip>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button>Nouvelle session</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle className="ft-font-display text-2xl font-semibold">
+                    Nouvelle session
+                  </DialogTitle>
+                  <DialogDescription className="ft-text-muted text-sm">
+                    Choisis une duree et lance ton prochain focus.
+                  </DialogDescription>
+                </DialogHeader>
 
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button>Nouvelle session</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle className="ft-font-display text-2xl font-semibold">
-                  Nouvelle session
-                </DialogTitle>
-                <DialogDescription className="ft-text-muted text-sm">
-                  Choisis une duree et lance ton prochain focus.
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                <Button variant="secondary">25 min</Button>
-                <Button variant="secondary">45 min</Button>
-                <Button variant="secondary">60 min</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </section>
-
-      <section className="flex flex-1 flex-col gap-5 overflow-auto p-5 sm:p-6">
-        <header className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,1fr)]">
-          <div className="space-y-4">
-            <h1 className="ft-font-display max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
-              Reste concentre. Une session a la fois.
-            </h1>
-            <p className="ft-text-muted max-w-2xl text-sm leading-7 sm:text-base">
-              Suis ton temps, garde ton rythme et retrouve tes sessions en un
-              coup d&apos;oeil.
-            </p>
-          </div>
-
-          <Card className="ft-panel p-5">
-            <CardHeader>
-              <CardDescription>Etat</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {runtimeHealth.isLoading ? (
-                <p className="ft-text-muted text-sm">Preparation en cours...</p>
-              ) : runtimeHealth.isError ? (
-                <p className="text-sm text-[var(--color-danger)]">
-                  Impossible de charger l&apos;application.
-                </p>
-              ) : (
-                <dl className="space-y-3 text-sm">
-                  <div className="flex justify-between gap-4">
-                    <dt className="ft-text-soft">Application</dt>
-                    <dd>{runtimeHealth.data.productName}</dd>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <dt className="ft-text-soft">Suivi</dt>
-                    <dd className="ft-brand-badge rounded-full px-2.5 py-1 text-xs font-medium">
-                      Pret
-                    </dd>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <dt className="ft-text-soft">Plateforme</dt>
-                    <dd>{runtimeHealth.data.platform}</dd>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <dt className="ft-text-soft">Stockage</dt>
-                    <dd>Local</dd>
-                  </div>
-                </dl>
-              )}
-            </CardContent>
-          </Card>
-        </header>
-
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {focusStats.map((item) => (
-            <Card key={item.label}>
-              <CardDescription>{item.label}</CardDescription>
-              <CardTitle className="mt-3">{item.value}</CardTitle>
-            </Card>
-          ))}
-
-          <Card>
-            <CardDescription>Top app</CardDescription>
-            <CardTitle className="mt-3">Aucune</CardTitle>
-          </Card>
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  <Button variant="secondary">25 min</Button>
+                  <Button variant="secondary">45 min</Button>
+                  <Button variant="secondary">60 min</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </>
+        }
+        description={activeRoute.description}
+        eyebrow={activeRoute.eyebrow}
+        routes={routes}
+        title={activeRoute.title}
+      >
+        <section className="flex flex-1 flex-col gap-5 overflow-auto p-5 sm:p-6">
+          <Routes>
+            {routes.map((route) => (
+              <Route key={route.path} element={route.element} path={route.path} />
+            ))}
+            <Route element={<Navigate replace to="/" />} path="*" />
+          </Routes>
         </section>
-
-        <Tabs defaultValue="session" className="grid gap-4">
-          <TabsList>
-            <TabsTrigger value="session">Session</TabsTrigger>
-            <TabsTrigger value="apps">Applications</TabsTrigger>
-          </TabsList>
-
-          <TabsContent
-            value="session"
-            className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,1fr)]"
-          >
-            <Card className="ft-panel p-6">
-              <CardHeader>
-                <CardDescription>Session</CardDescription>
-                <CardTitle>Aucune session en cours.</CardTitle>
-              </CardHeader>
-            </Card>
-
-            <Card className="ft-panel p-6">
-              <CardHeader>
-                <CardDescription>Pause suivante</CardDescription>
-                <CardTitle>25 min</CardTitle>
-              </CardHeader>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="apps">
-            <Card className="ft-panel p-6">
-              <CardHeader>
-                <CardDescription>Applications</CardDescription>
-                <CardTitle>Le suivi apparaitra ici.</CardTitle>
-              </CardHeader>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </section>
       </DesktopShell>
     </TooltipProvider>
   );
+}
+
+export function AppShell() {
+  return <AppShellFrame />;
 }

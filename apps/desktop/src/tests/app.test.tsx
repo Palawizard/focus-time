@@ -22,8 +22,6 @@ describe("App", () => {
     render(<App />);
 
     expect(screen.getByText("Focus Time")).toBeInTheDocument();
-    expect(
-      screen.getByText(/Reste concentre. Une session a la fois./i),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Vue d'ensemble")).toBeInTheDocument();
   });
 });
