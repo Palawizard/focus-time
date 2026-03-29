@@ -234,7 +234,7 @@ Definition de fini :
 - [x] Integrer `Radix UI` et creer les primitives de base : button, card, dialog, tabs, tooltip.
 - [x] Creer les ecrans vides : Focus, History, Stats, Tracker, Gamification, Settings.
 - [x] Poser la navigation et les routes.
-- [ ] Ajouter le theming clair/sombre seulement si necessaire au produit.
+- [x] Ajouter le theming clair/sombre seulement si necessaire au produit.
 
 Definition de fini :
 

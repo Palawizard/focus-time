@@ -3,6 +3,7 @@ import { AppWindow, ChartColumnBig, History, SlidersHorizontal, TimerReset, Trop
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { Button } from "../components/ui/Button";
+import { ThemeSwitch } from "../components/ThemeSwitch";
 import {
   Dialog,
   DialogContent,
@@ -104,6 +105,8 @@ function AppShellFrame() {
       <DesktopShell
         actions={
           <>
+            <ThemeSwitch />
+
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="ft-panel-muted px-4 py-2 text-sm">
