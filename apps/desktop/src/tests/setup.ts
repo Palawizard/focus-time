@@ -13,3 +13,14 @@ Object.defineProperty(window, "matchMedia", {
     dispatchEvent: () => false,
   }),
 });
+
+Object.defineProperty(window, "Notification", {
+  writable: true,
+  value: class NotificationMock {
+    static permission = "granted";
+
+    static requestPermission() {
+      return Promise.resolve("granted");
+    }
+  },
+});

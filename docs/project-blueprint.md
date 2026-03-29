@@ -260,7 +260,7 @@ Definition de fini :
 - [x] Modeliser presets, session active, pause, reprise, annulation, completion.
 - [x] Construire le moteur de timer cote Rust pour eviter les derives de timing.
 - [x] Exposer les commandes start, pause, resume, stop, skip-break.
-- [ ] Synchroniser l'etat du timer avec le front.
+- [x] Synchroniser l'etat du timer avec le front.
 - [ ] Ajouter notifications desktop et son facultatif.
 - [ ] Sauvegarder automatiquement les sessions terminees et interrompues.
 
