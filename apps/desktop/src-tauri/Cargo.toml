@@ -15,9 +15,11 @@ tauri-build.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+chrono.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tauri.workspace = true
+sqlx.workspace = true
 focus-domain = { path = "../../../crates/focus-domain" }
 focus-persistence = { path = "../../../crates/focus-persistence" }
 focus-stats = { path = "../../../crates/focus-stats" }

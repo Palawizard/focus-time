@@ -912,12 +912,14 @@ name = "focus-time-desktop"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "focus-domain",
  "focus-persistence",
  "focus-stats",
  "focus-tracking",
  "serde",
  "serde_json",
+ "sqlx",
  "tauri",
  "tauri-build",
 ]

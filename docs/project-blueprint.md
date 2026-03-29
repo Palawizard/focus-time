@@ -246,7 +246,7 @@ Definition de fini :
 - [x] Concevoir le schema SQLite initial.
 - [x] Ajouter les migrations SQL versionnees.
 - [x] Implementer les repositories Rust pour sessions, preferences, apps trackees et stats.
-- [ ] Exposer des commandes Tauri pour lire et ecrire les donnees principales.
+- [x] Exposer des commandes Tauri pour lire et ecrire les donnees principales.
 - [ ] Ajouter une couche de seed ou fixtures de dev.
 - [ ] Verifier les migrations sur base vide et base existante.
 
