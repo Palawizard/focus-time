@@ -262,7 +262,7 @@ Definition de fini :
 - [x] Exposer les commandes start, pause, resume, stop, skip-break.
 - [x] Synchroniser l'etat du timer avec le front.
 - [x] Ajouter notifications desktop et son facultatif.
-- [ ] Sauvegarder automatiquement les sessions terminees et interrompues.
+- [x] Sauvegarder automatiquement les sessions terminees et interrompues.
 
 Definition de fini :
 

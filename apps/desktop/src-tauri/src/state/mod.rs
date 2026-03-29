@@ -8,7 +8,11 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(pomodoro: PomodoroService, runtime: RuntimeService, storage: StorageService) -> Self {
+    pub fn new(
+        pomodoro: PomodoroService,
+        runtime: RuntimeService,
+        storage: StorageService,
+    ) -> Self {
         Self {
             pomodoro,
             runtime,

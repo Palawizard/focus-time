@@ -4,13 +4,16 @@ use std::{
 };
 
 use chrono::Utc;
+use focus_domain::SessionStatus;
 use focus_domain::{
-    PomodoroControlState, PomodoroPhase, PomodoroPreset, PomodoroSessionOutcome,
-    PomodoroSnapshot, PomodoroTransition, PomodoroTransitionKind,
+    PomodoroControlState, PomodoroPhase, PomodoroPreset, PomodoroSessionOutcome, PomodoroSnapshot,
+    PomodoroTransition, PomodoroTransitionKind,
 };
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 use tokio::{sync::Mutex, time};
+
+use super::StorageService;
 
 const STATE_EVENT: &str = "pomodoro://state";
 const TRANSITION_EVENT: &str = "pomodoro://transition";
@@ -18,6 +21,7 @@ const TRANSITION_EVENT: &str = "pomodoro://transition";
 #[derive(Debug, Clone)]
 pub struct PomodoroService {
     runtime: Arc<Mutex<PomodoroRuntime>>,
+    storage: StorageService,
 }
 
 #[derive(Debug, Clone)]
@@ -25,6 +29,7 @@ pub struct StartPomodoroInput {
     pub preset: PomodoroPreset,
     pub auto_start_breaks: bool,
     pub auto_start_focus: bool,
+    pub session_id: Option<i64>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -41,6 +46,8 @@ pub enum PomodoroError {
     NotBreakPhase,
     #[error("failed to emit pomodoro event: {0}")]
     Emit(#[from] tauri::Error),
+    #[error("failed to persist pomodoro session: {0}")]
+    Persistence(#[from] anyhow::Error),
 }
 
 #[derive(Debug)]
@@ -63,12 +70,18 @@ struct PhaseTiming {
     started_at: Option<Instant>,
 }
 
-impl PomodoroService {
-    pub fn new(app_handle: AppHandle) -> Self {
-        let runtime = Arc::new(Mutex::new(PomodoroRuntime::new()));
-        spawn_pomodoro_loop(app_handle, runtime.clone());
+struct PomodoroUpdate {
+    previous_state: PomodoroSnapshot,
+    state: PomodoroSnapshot,
+    transition: PomodoroTransition,
+}
 
-        Self { runtime }
+impl PomodoroService {
+    pub fn new(app_handle: AppHandle, storage: StorageService) -> Self {
+        let runtime = Arc::new(Mutex::new(PomodoroRuntime::new()));
+        spawn_pomodoro_loop(app_handle, runtime.clone(), storage.clone());
+
+        Self { runtime, storage }
     }
 
     pub async fn get_state(&self) -> PomodoroSnapshot {
@@ -79,73 +92,139 @@ impl PomodoroService {
     pub async fn start(
         &self,
         app_handle: &AppHandle,
-        input: StartPomodoroInput,
+        mut input: StartPomodoroInput,
     ) -> Result<PomodoroSnapshot, PomodoroError> {
-        let (state, transition) = {
+        self.ensure_idle().await?;
+        let session = self
+            .storage
+            .create_session(
+                input.preset.focus_minutes,
+                SessionStatus::InProgress,
+                Some(input.preset.label.clone()),
+                None,
+            )
+            .await?;
+        input.session_id = Some(session.id);
+
+        let update = {
             let mut runtime = self.runtime.lock().await;
-            let transition = runtime.start(input)?;
-            (runtime.current_snapshot(), transition)
+            runtime.start(input)?
         };
 
-        emit_transition(app_handle, &transition)?;
-        emit_state(app_handle, &state)?;
-
-        Ok(state)
+        self.handle_update(app_handle, update).await
     }
 
     pub async fn pause(&self, app_handle: &AppHandle) -> Result<PomodoroSnapshot, PomodoroError> {
-        let (state, transition) = {
+        let update = {
             let mut runtime = self.runtime.lock().await;
-            let transition = runtime.pause()?;
-            (runtime.current_snapshot(), transition)
+            runtime.pause()?
         };
 
-        emit_transition(app_handle, &transition)?;
-        emit_state(app_handle, &state)?;
-
-        Ok(state)
+        self.handle_update(app_handle, update).await
     }
 
     pub async fn resume(&self, app_handle: &AppHandle) -> Result<PomodoroSnapshot, PomodoroError> {
-        let (state, transition) = {
+        let update = {
             let mut runtime = self.runtime.lock().await;
-            let transition = runtime.resume()?;
-            (runtime.current_snapshot(), transition)
+            runtime.resume()?
         };
 
-        emit_transition(app_handle, &transition)?;
-        emit_state(app_handle, &state)?;
-
-        Ok(state)
+        self.handle_update(app_handle, update).await
     }
 
     pub async fn stop(&self, app_handle: &AppHandle) -> Result<PomodoroSnapshot, PomodoroError> {
-        let (state, transition) = {
+        let update = {
             let mut runtime = self.runtime.lock().await;
-            let transition = runtime.stop()?;
-            (runtime.current_snapshot(), transition)
+            runtime.stop()?
         };
 
-        emit_transition(app_handle, &transition)?;
-        emit_state(app_handle, &state)?;
-
-        Ok(state)
+        self.handle_update(app_handle, update).await
     }
 
     pub async fn skip_break(
         &self,
         app_handle: &AppHandle,
     ) -> Result<PomodoroSnapshot, PomodoroError> {
-        let (state, transition) = {
+        let update = {
             let mut runtime = self.runtime.lock().await;
-            let transition = runtime.skip_break()?;
-            (runtime.current_snapshot(), transition)
+            runtime.skip_break()?
         };
 
-        emit_transition(app_handle, &transition)?;
-        emit_state(app_handle, &state)?;
+        self.handle_update(app_handle, update).await
+    }
 
-        Ok(state)
+    async fn ensure_idle(&self) -> Result<(), PomodoroError> {
+        let runtime = self.runtime.lock().await;
+
+        if runtime.snapshot.control_state == PomodoroControlState::Idle {
+            Ok(())
+        } else {
+            Err(PomodoroError::AlreadyActive)
+        }
+    }
+
+    async fn handle_update(
+        &self,
+        app_handle: &AppHandle,
+        mut update: PomodoroUpdate,
+    ) -> Result<PomodoroSnapshot, PomodoroError> {
+        self.finalize_session_if_needed(&update.previous_state, update.transition.kind)
+            .await?;
+
+        if matches!(
+            update.transition.kind,
+            PomodoroTransitionKind::NextFocusStarted
+        ) && update.state.session_id.is_none()
+        {
+            update.state =
+                attach_next_session_id(&self.storage, &self.runtime, &update.state.preset).await?;
+        }
+
+        emit_transition(app_handle, &update.transition)?;
+        emit_state(app_handle, &update.state)?;
+
+        Ok(update.state)
+    }
+
+    async fn finalize_session_if_needed(
+        &self,
+        previous_state: &PomodoroSnapshot,
+        transition_kind: PomodoroTransitionKind,
+    ) -> Result<(), PomodoroError> {
+        let Some(session_id) = previous_state.session_id else {
+            return Ok(());
+        };
+
+        let should_finalize = matches!(
+            transition_kind,
+            PomodoroTransitionKind::SessionStopped
+                | PomodoroTransitionKind::BreakSkipped
+                | PomodoroTransitionKind::BreakCompleted
+                | PomodoroTransitionKind::NextFocusStarted
+        );
+
+        if !should_finalize {
+            return Ok(());
+        }
+
+        let focus_target_seconds = i64::from(previous_state.preset.focus_minutes) * 60;
+        let status = if previous_state.focus_seconds_elapsed >= focus_target_seconds {
+            SessionStatus::Completed
+        } else {
+            SessionStatus::Cancelled
+        };
+
+        self.storage
+            .update_session(
+                session_id,
+                Utc::now(),
+                previous_state.focus_seconds_elapsed,
+                previous_state.break_seconds_elapsed,
+                status,
+            )
+            .await?;
+
+        Ok(())
     }
 }
 
@@ -187,13 +266,14 @@ impl PomodoroRuntime {
         snapshot
     }
 
-    fn start(&mut self, input: StartPomodoroInput) -> Result<PomodoroTransition, PomodoroError> {
+    fn start(&mut self, input: StartPomodoroInput) -> Result<PomodoroUpdate, PomodoroError> {
         if self.snapshot.control_state != PomodoroControlState::Idle {
             return Err(PomodoroError::AlreadyActive);
         }
 
         let now = Utc::now();
         let focus_seconds = i64::from(input.preset.focus_minutes) * 60;
+        let previous_state = self.current_snapshot();
         self.snapshot = PomodoroSnapshot {
             control_state: PomodoroControlState::Running,
             phase: Some(PomodoroPhase::Focus),
@@ -215,26 +295,36 @@ impl PomodoroRuntime {
             can_resume: false,
             can_stop: true,
             can_skip_break: false,
-            session_id: None,
+            session_id: input.session_id,
             outcome: None,
         };
         self.phase_timing = Some(PhaseTiming::running(focus_seconds));
 
-        Ok(self.build_transition(
+        let transition = self.build_transition(
             PomodoroTransitionKind::SessionStarted,
             "Focus started",
             format!("{} minutes on the clock.", input.preset.focus_minutes),
-        ))
+        );
+
+        Ok(PomodoroUpdate {
+            previous_state,
+            state: self.current_snapshot(),
+            transition,
+        })
     }
 
-    fn pause(&mut self) -> Result<PomodoroTransition, PomodoroError> {
+    fn pause(&mut self) -> Result<PomodoroUpdate, PomodoroError> {
         if !self.snapshot.is_running() {
             return Err(PomodoroError::NotRunning);
         }
 
         let now = Utc::now();
+        let previous_state = self.current_snapshot();
         let snapshot = self.current_snapshot();
-        let phase_timing = self.phase_timing.as_mut().ok_or(PomodoroError::NoActiveSession)?;
+        let phase_timing = self
+            .phase_timing
+            .as_mut()
+            .ok_or(PomodoroError::NoActiveSession)?;
 
         phase_timing.pause();
         self.snapshot = snapshot;
@@ -244,20 +334,30 @@ impl PomodoroRuntime {
         self.snapshot.can_pause = false;
         self.snapshot.can_resume = true;
 
-        Ok(self.build_transition(
+        let transition = self.build_transition(
             PomodoroTransitionKind::Paused,
             "Timer paused",
             "You can resume whenever you're ready.".to_string(),
-        ))
+        );
+
+        Ok(PomodoroUpdate {
+            previous_state,
+            state: self.current_snapshot(),
+            transition,
+        })
     }
 
-    fn resume(&mut self) -> Result<PomodoroTransition, PomodoroError> {
+    fn resume(&mut self) -> Result<PomodoroUpdate, PomodoroError> {
         if !self.snapshot.is_paused() {
             return Err(PomodoroError::NotPaused);
         }
 
         let now = Utc::now();
-        let phase_timing = self.phase_timing.as_mut().ok_or(PomodoroError::NoActiveSession)?;
+        let previous_state = self.current_snapshot();
+        let phase_timing = self
+            .phase_timing
+            .as_mut()
+            .ok_or(PomodoroError::NoActiveSession)?;
 
         phase_timing.resume();
         self.snapshot.control_state = PomodoroControlState::Running;
@@ -270,18 +370,25 @@ impl PomodoroRuntime {
         self.snapshot.can_pause = true;
         self.snapshot.can_resume = false;
 
-        Ok(self.build_transition(
+        let transition = self.build_transition(
             PomodoroTransitionKind::Resumed,
             "Timer resumed",
             "Back in motion.".to_string(),
-        ))
+        );
+
+        Ok(PomodoroUpdate {
+            previous_state,
+            state: self.current_snapshot(),
+            transition,
+        })
     }
 
-    fn stop(&mut self) -> Result<PomodoroTransition, PomodoroError> {
+    fn stop(&mut self) -> Result<PomodoroUpdate, PomodoroError> {
         if self.snapshot.control_state == PomodoroControlState::Idle {
             return Err(PomodoroError::NoActiveSession);
         }
 
+        let previous_state = self.current_snapshot();
         let snapshot = self.current_snapshot();
         let outcome = if snapshot.focus_seconds_elapsed >= snapshot.phase_total_seconds
             || snapshot.focus_seconds_elapsed >= i64::from(snapshot.preset.focus_minutes) * 60
@@ -297,7 +404,7 @@ impl PomodoroRuntime {
         self.snapshot.completed_breaks = snapshot.completed_breaks;
         self.snapshot.outcome = Some(outcome);
 
-        Ok(self.build_transition(
+        let transition = self.build_transition(
             PomodoroTransitionKind::SessionStopped,
             if outcome == PomodoroSessionOutcome::Completed {
                 "Session closed"
@@ -309,10 +416,16 @@ impl PomodoroRuntime {
             } else {
                 "The timer ended before the focus block was completed.".to_string()
             },
-        ))
+        );
+
+        Ok(PomodoroUpdate {
+            previous_state,
+            state: self.current_snapshot(),
+            transition,
+        })
     }
 
-    fn skip_break(&mut self) -> Result<PomodoroTransition, PomodoroError> {
+    fn skip_break(&mut self) -> Result<PomodoroUpdate, PomodoroError> {
         if !matches!(
             self.snapshot.phase,
             Some(PomodoroPhase::ShortBreak | PomodoroPhase::LongBreak)
@@ -320,6 +433,7 @@ impl PomodoroRuntime {
             return Err(PomodoroError::NotBreakPhase);
         }
 
+        let previous_state = self.current_snapshot();
         let preset = self.snapshot.preset.clone();
         let completed_focus_blocks = self.snapshot.completed_focus_blocks;
         let completed_breaks = self.snapshot.completed_breaks;
@@ -330,11 +444,17 @@ impl PomodoroRuntime {
         self.snapshot.completed_breaks = completed_breaks;
         self.snapshot.outcome = Some(PomodoroSessionOutcome::SkippedBreak);
 
-        Ok(self.build_transition(
+        let transition = self.build_transition(
             PomodoroTransitionKind::BreakSkipped,
             "Break skipped",
             "Ready for the next focus block.".to_string(),
-        ))
+        );
+
+        Ok(PomodoroUpdate {
+            previous_state,
+            state: self.current_snapshot(),
+            transition,
+        })
     }
 
     fn tick(&mut self) -> TickResult {
@@ -343,18 +463,19 @@ impl PomodoroRuntime {
         if self.snapshot.control_state != PomodoroControlState::Running {
             return TickResult {
                 state_changed: false,
-                transition: None,
+                update: None,
             };
         }
 
         if previous_snapshot.remaining_seconds > 0 {
             return TickResult {
-                state_changed: previous_snapshot.remaining_seconds != self.snapshot.remaining_seconds,
-                transition: None,
+                state_changed: previous_snapshot.remaining_seconds
+                    != self.snapshot.remaining_seconds,
+                update: None,
             };
         }
 
-        let transition = match previous_snapshot.phase {
+        let update = match previous_snapshot.phase {
             Some(PomodoroPhase::Focus) => self.complete_focus_phase(previous_snapshot),
             Some(PomodoroPhase::ShortBreak | PomodoroPhase::LongBreak) => {
                 self.complete_break_phase(previous_snapshot)
@@ -364,20 +485,19 @@ impl PomodoroRuntime {
 
         TickResult {
             state_changed: true,
-            transition,
+            update,
         }
     }
 
-    fn complete_focus_phase(
-        &mut self,
-        snapshot: PomodoroSnapshot,
-    ) -> Option<PomodoroTransition> {
+    fn complete_focus_phase(&mut self, snapshot: PomodoroSnapshot) -> Option<PomodoroUpdate> {
+        let previous_state = snapshot.clone();
         self.snapshot = snapshot.clone();
         self.snapshot.completed_focus_blocks += 1;
 
-        let break_phase = if self.snapshot.completed_focus_blocks
-            % (self.snapshot.preset.sessions_until_long_break as u32)
-            == 0
+        let break_phase = if self
+            .snapshot
+            .completed_focus_blocks
+            .is_multiple_of(self.snapshot.preset.sessions_until_long_break as u32)
         {
             PomodoroPhase::LongBreak
         } else {
@@ -392,7 +512,7 @@ impl PomodoroRuntime {
 
         self.begin_phase(break_phase, break_seconds, starts_running);
 
-        Some(self.build_transition(
+        let transition = self.build_transition(
             PomodoroTransitionKind::FocusCompleted,
             "Focus complete",
             if starts_running {
@@ -400,13 +520,17 @@ impl PomodoroRuntime {
             } else {
                 "Break is ready when you are.".to_string()
             },
-        ))
+        );
+
+        Some(PomodoroUpdate {
+            previous_state,
+            state: self.current_snapshot(),
+            transition,
+        })
     }
 
-    fn complete_break_phase(
-        &mut self,
-        snapshot: PomodoroSnapshot,
-    ) -> Option<PomodoroTransition> {
+    fn complete_break_phase(&mut self, snapshot: PomodoroSnapshot) -> Option<PomodoroUpdate> {
+        let previous_state = snapshot.clone();
         self.snapshot = snapshot;
         self.snapshot.completed_breaks += 1;
 
@@ -445,11 +569,17 @@ impl PomodoroRuntime {
             };
             self.phase_timing = Some(PhaseTiming::running(focus_seconds));
 
-            return Some(self.build_transition(
+            let transition = self.build_transition(
                 PomodoroTransitionKind::NextFocusStarted,
                 "Next focus started",
                 "A new focus block is already underway.".to_string(),
-            ));
+            );
+
+            return Some(PomodoroUpdate {
+                previous_state,
+                state: self.current_snapshot(),
+                transition,
+            });
         }
 
         let preset = self.snapshot.preset.clone();
@@ -461,11 +591,17 @@ impl PomodoroRuntime {
         self.snapshot.completed_breaks = completed_breaks;
         self.snapshot.outcome = Some(PomodoroSessionOutcome::Completed);
 
-        Some(self.build_transition(
+        let transition = self.build_transition(
             PomodoroTransitionKind::BreakCompleted,
             "Break complete",
             "Ready for the next round.".to_string(),
-        ))
+        );
+
+        Some(PomodoroUpdate {
+            previous_state,
+            state: self.current_snapshot(),
+            transition,
+        })
     }
 
     fn begin_phase(&mut self, phase: PomodoroPhase, total_seconds: i64, starts_running: bool) {
@@ -513,6 +649,10 @@ impl PomodoroRuntime {
 
         transition
     }
+
+    fn set_session_id(&mut self, session_id: i64) {
+        self.snapshot.session_id = Some(session_id);
+    }
 }
 
 impl PhaseTiming {
@@ -553,10 +693,14 @@ impl PhaseTiming {
 
 struct TickResult {
     state_changed: bool,
-    transition: Option<PomodoroTransition>,
+    update: Option<PomodoroUpdate>,
 }
 
-fn spawn_pomodoro_loop(app_handle: AppHandle, runtime: Arc<Mutex<PomodoroRuntime>>) {
+fn spawn_pomodoro_loop(
+    app_handle: AppHandle,
+    runtime: Arc<Mutex<PomodoroRuntime>>,
+    storage: StorageService,
+) {
     tauri::async_runtime::spawn(async move {
         let mut interval = time::interval(Duration::from_millis(250));
         let mut last_remaining_seconds = None;
@@ -573,20 +717,107 @@ fn spawn_pomodoro_loop(app_handle: AppHandle, runtime: Arc<Mutex<PomodoroRuntime
                     || last_remaining_seconds != Some(current_state.remaining_seconds);
                 last_remaining_seconds = Some(current_state.remaining_seconds);
 
-                (state_changed, tick_result.transition, current_state)
+                (state_changed, tick_result.update, current_state)
             };
 
-            if let Some(transition) = tick_result.1.as_ref() {
-                if emit_transition(&app_handle, transition).is_err() {
+            let mut current_state = tick_result.2;
+
+            if let Some(update) = tick_result.1 {
+                if finalize_session_in_storage(
+                    &storage,
+                    &update.previous_state,
+                    update.transition.kind,
+                )
+                .await
+                .is_err()
+                {
+                    break;
+                }
+
+                if matches!(
+                    update.transition.kind,
+                    PomodoroTransitionKind::NextFocusStarted
+                ) && update.state.session_id.is_none()
+                {
+                    match attach_next_session_id(&storage, &runtime, &update.state.preset).await {
+                        Ok(state) => {
+                            current_state = state;
+                        }
+                        Err(_) => break,
+                    }
+                }
+
+                if emit_transition(&app_handle, &update.transition).is_err() {
                     break;
                 }
             }
 
-            if tick_result.0 && emit_state(&app_handle, &tick_result.2).is_err() {
+            if tick_result.0 && emit_state(&app_handle, &current_state).is_err() {
                 break;
             }
         }
     });
+}
+
+async fn finalize_session_in_storage(
+    storage: &StorageService,
+    previous_state: &PomodoroSnapshot,
+    transition_kind: PomodoroTransitionKind,
+) -> anyhow::Result<()> {
+    let Some(session_id) = previous_state.session_id else {
+        return Ok(());
+    };
+
+    let should_finalize = matches!(
+        transition_kind,
+        PomodoroTransitionKind::SessionStopped
+            | PomodoroTransitionKind::BreakSkipped
+            | PomodoroTransitionKind::BreakCompleted
+            | PomodoroTransitionKind::NextFocusStarted
+    );
+
+    if !should_finalize {
+        return Ok(());
+    }
+
+    let focus_target_seconds = i64::from(previous_state.preset.focus_minutes) * 60;
+    let status = if previous_state.focus_seconds_elapsed >= focus_target_seconds {
+        SessionStatus::Completed
+    } else {
+        SessionStatus::Cancelled
+    };
+
+    storage
+        .update_session(
+            session_id,
+            Utc::now(),
+            previous_state.focus_seconds_elapsed,
+            previous_state.break_seconds_elapsed,
+            status,
+        )
+        .await?;
+
+    Ok(())
+}
+
+async fn attach_next_session_id(
+    storage: &StorageService,
+    runtime: &Arc<Mutex<PomodoroRuntime>>,
+    preset: &PomodoroPreset,
+) -> anyhow::Result<PomodoroSnapshot> {
+    let session = storage
+        .create_session(
+            preset.focus_minutes,
+            SessionStatus::InProgress,
+            Some(preset.label.clone()),
+            None,
+        )
+        .await?;
+
+    let mut runtime = runtime.lock().await;
+    runtime.set_session_id(session.id);
+
+    Ok(runtime.current_snapshot())
 }
 
 fn emit_state(app_handle: &AppHandle, state: &PomodoroSnapshot) -> Result<(), PomodoroError> {
@@ -609,8 +840,14 @@ fn emit_transition(
 
 #[cfg(test)]
 mod tests {
+    use super::finalize_session_in_storage;
     use super::{PomodoroRuntime, StartPomodoroInput};
-    use focus_domain::{PomodoroControlState, PomodoroPhase, PomodoroPreset, PomodoroTransitionKind};
+    use focus_domain::{
+        PomodoroControlState, PomodoroPhase, PomodoroPreset, PomodoroTransitionKind, SessionStatus,
+    };
+    use tempfile::tempdir;
+
+    use crate::services::StorageService;
 
     #[test]
     fn starts_a_focus_phase() {
@@ -621,12 +858,19 @@ mod tests {
                 preset: PomodoroPreset::default(),
                 auto_start_breaks: true,
                 auto_start_focus: false,
+                session_id: None,
             })
             .expect("timer should start");
 
-        assert_eq!(transition.kind, PomodoroTransitionKind::SessionStarted);
+        assert_eq!(
+            transition.transition.kind,
+            PomodoroTransitionKind::SessionStarted
+        );
         assert_eq!(runtime.snapshot.phase, Some(PomodoroPhase::Focus));
-        assert_eq!(runtime.snapshot.control_state, PomodoroControlState::Running);
+        assert_eq!(
+            runtime.snapshot.control_state,
+            PomodoroControlState::Running
+        );
     }
 
     #[test]
@@ -637,6 +881,7 @@ mod tests {
                 preset: PomodoroPreset::default(),
                 auto_start_breaks: true,
                 auto_start_focus: false,
+                session_id: None,
             })
             .expect("timer should start");
 
@@ -644,7 +889,10 @@ mod tests {
         assert_eq!(runtime.snapshot.control_state, PomodoroControlState::Paused);
 
         runtime.resume().expect("resume should succeed");
-        assert_eq!(runtime.snapshot.control_state, PomodoroControlState::Running);
+        assert_eq!(
+            runtime.snapshot.control_state,
+            PomodoroControlState::Running
+        );
         assert_eq!(runtime.snapshot.phase, Some(PomodoroPhase::Focus));
     }
 
@@ -656,14 +904,62 @@ mod tests {
                 preset: PomodoroPreset::default(),
                 auto_start_breaks: true,
                 auto_start_focus: false,
+                session_id: None,
             })
             .expect("timer should start");
-        runtime.phase_timing.as_mut().expect("timing").committed_elapsed_seconds =
-            runtime.snapshot.phase_total_seconds;
+        runtime
+            .phase_timing
+            .as_mut()
+            .expect("timing")
+            .committed_elapsed_seconds = runtime.snapshot.phase_total_seconds;
 
         let tick = runtime.tick();
 
-        assert!(tick.transition.is_some());
+        assert!(tick.update.is_some());
         assert_eq!(runtime.snapshot.phase, Some(PomodoroPhase::ShortBreak));
+    }
+
+    #[tokio::test]
+    async fn finalizes_a_persisted_session() {
+        let temp = tempdir().expect("temporary directory should be created");
+        let storage = StorageService::new(temp.path().join("focus-time.sqlite"))
+            .await
+            .expect("storage should initialize");
+        storage
+            .ensure_ready()
+            .await
+            .expect("storage should be ready");
+        let session = storage
+            .create_session(
+                25,
+                SessionStatus::InProgress,
+                Some("Classic".to_string()),
+                None,
+            )
+            .await
+            .expect("session should be created");
+
+        let mut snapshot = focus_domain::PomodoroSnapshot::idle(PomodoroPreset::default());
+        snapshot.session_id = Some(session.id);
+        snapshot.preset = PomodoroPreset::default();
+        snapshot.focus_seconds_elapsed = 1_500;
+        snapshot.break_seconds_elapsed = 300;
+
+        finalize_session_in_storage(&storage, &snapshot, PomodoroTransitionKind::BreakCompleted)
+            .await
+            .expect("session should be finalized");
+
+        let persisted = storage
+            .list_sessions(1)
+            .await
+            .expect("session should be readable")
+            .into_iter()
+            .next()
+            .expect("one session should exist");
+
+        assert_eq!(persisted.status, SessionStatus::Completed);
+        assert_eq!(persisted.actual_focus_seconds, 1_500);
+        assert_eq!(persisted.break_seconds, 300);
+        assert!(persisted.ended_at.is_some());
     }
 }

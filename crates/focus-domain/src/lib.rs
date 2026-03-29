@@ -64,7 +64,10 @@ mod tests {
 
     #[test]
     fn exposes_transition_kind_labels() {
-        assert_eq!(PomodoroTransitionKind::FocusCompleted.as_str(), "focus_completed");
+        assert_eq!(
+            PomodoroTransitionKind::FocusCompleted.as_str(),
+            "focus_completed"
+        );
         assert_eq!(PomodoroSessionOutcome::Interrupted.as_str(), "interrupted");
         assert_eq!(PomodoroPhase::LongBreak.as_str(), "long_break");
     }

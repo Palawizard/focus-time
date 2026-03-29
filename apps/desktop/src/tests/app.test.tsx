@@ -11,7 +11,7 @@ vi.mock("../lib/tauri", () => ({
     productName: "Focus Time",
     desktopShell: "Tauri v2",
     platform: "windows-x86_64",
-    persistenceMode: "sqlite-planned",
+    persistenceMode: "sqlite",
     workspaceCrates: [
       "focus-domain",
       "focus-persistence",

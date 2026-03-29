@@ -10,9 +10,9 @@ use bootstrap::build_state;
 use commands::{
     create_session, create_session_segment, get_pomodoro_state, get_runtime_health,
     get_user_preferences, list_daily_stats, list_session_segments, list_sessions,
-    list_tracked_apps, pause_pomodoro, resume_pomodoro, save_daily_stat,
-    save_user_preferences, seed_development_fixtures, skip_pomodoro_break, start_pomodoro,
-    stop_pomodoro, upsert_tracked_app,
+    list_tracked_apps, pause_pomodoro, resume_pomodoro, save_daily_stat, save_user_preferences,
+    seed_development_fixtures, skip_pomodoro_break, start_pomodoro, stop_pomodoro,
+    upsert_tracked_app,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

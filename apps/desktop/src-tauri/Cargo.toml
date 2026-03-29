@@ -26,3 +26,6 @@ focus-domain = { path = "../../../crates/focus-domain" }
 focus-persistence = { path = "../../../crates/focus-persistence" }
 focus-stats = { path = "../../../crates/focus-stats" }
 focus-tracking = { path = "../../../crates/focus-tracking" }
+
+[dev-dependencies]
+tempfile = "3.23"

@@ -6,7 +6,7 @@ use focus_domain::{DailyStat, Session, SessionSegment, SessionStatus, TrackedApp
 use focus_persistence::{
     connect_database, run_migrations, seed_development_data, CreateSessionInput,
     CreateSessionSegmentInput, DevelopmentSeedReport, Repositories, SaveDailyStatInput,
-    UpsertTrackedAppInput,
+    UpdateSessionInput, UpsertTrackedAppInput,
 };
 use sqlx::SqlitePool;
 
@@ -48,6 +48,27 @@ impl StorageService {
                 status,
                 preset_label,
                 note,
+            })
+            .await
+            .map_err(Into::into)
+    }
+
+    pub async fn update_session(
+        &self,
+        session_id: i64,
+        ended_at: chrono::DateTime<Utc>,
+        actual_focus_seconds: i64,
+        break_seconds: i64,
+        status: SessionStatus,
+    ) -> anyhow::Result<Session> {
+        self.repositories
+            .sessions
+            .update(UpdateSessionInput {
+                session_id,
+                ended_at: Some(ended_at),
+                actual_focus_seconds,
+                break_seconds,
+                status,
             })
             .await
             .map_err(Into::into)

@@ -13,7 +13,7 @@ pub use migrations::{
 };
 pub use repositories::{
     CreateSessionInput, CreateSessionSegmentInput, DailyStatRepository, PreferencesRepository,
-    Repositories, SaveDailyStatInput, SessionRepository, TrackedAppRepository,
+    Repositories, SaveDailyStatInput, SessionRepository, TrackedAppRepository, UpdateSessionInput,
     UpsertTrackedAppInput,
 };
 pub use schema::{initial_schema, DatabaseSchema, TableDefinition};

@@ -45,6 +45,15 @@ pub struct CreateSessionInput {
 }
 
 #[derive(Debug, Clone)]
+pub struct UpdateSessionInput {
+    pub session_id: i64,
+    pub ended_at: Option<DateTime<Utc>>,
+    pub actual_focus_seconds: i64,
+    pub break_seconds: i64,
+    pub status: SessionStatus,
+}
+
+#[derive(Debug, Clone)]
 pub struct CreateSessionSegmentInput {
     pub session_id: i64,
     pub tracked_app_id: Option<i64>,
@@ -256,6 +265,31 @@ impl SessionRepository {
         rows.into_iter()
             .map(SessionSegmentRow::try_into_domain)
             .collect()
+    }
+
+    pub async fn update(&self, input: UpdateSessionInput) -> Result<Session, PersistenceError> {
+        sqlx::query(
+            r#"
+            UPDATE sessions
+            SET
+              ended_at = ?,
+              actual_focus_seconds = ?,
+              break_seconds = ?,
+              status = ?,
+              updated_at = ?
+            WHERE id = ?
+            "#,
+        )
+        .bind(input.ended_at.map(|value| value.to_rfc3339()))
+        .bind(input.actual_focus_seconds)
+        .bind(input.break_seconds)
+        .bind(input.status.as_str())
+        .bind(Utc::now().to_rfc3339())
+        .bind(input.session_id)
+        .execute(&self.pool)
+        .await?;
+
+        self.get_by_id(input.session_id).await
     }
 }
 

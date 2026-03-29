@@ -1,10 +1,7 @@
 use focus_domain::{PomodoroPreset, PomodoroSnapshot};
 use serde::Deserialize;
 
-use crate::{
-    services::StartPomodoroInput,
-    state::AppState,
-};
+use crate::{services::StartPomodoroInput, state::AppState};
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -45,6 +42,7 @@ pub async fn start_pomodoro(
                 },
                 auto_start_breaks: request.auto_start_breaks,
                 auto_start_focus: request.auto_start_focus,
+                session_id: None,
             },
         )
         .await
