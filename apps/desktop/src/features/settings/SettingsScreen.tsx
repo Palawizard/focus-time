@@ -5,7 +5,7 @@ export function SettingsScreen() {
     <Card className="ft-panel p-6">
       <CardHeader>
         <CardDescription>Settings</CardDescription>
-        <CardTitle>Choisis ton rythme et tes preferences.</CardTitle>
+        <CardTitle>Shape the flow that works for you.</CardTitle>
       </CardHeader>
 
       <div className="mt-8 grid gap-3 md:grid-cols-3">
@@ -14,12 +14,12 @@ export function SettingsScreen() {
           <p className="mt-2 text-sm">25 min</p>
         </div>
         <div className="ft-panel-muted px-4 py-3">
-          <p className="ft-text-muted text-sm">Pause</p>
+          <p className="ft-text-muted text-sm">Break</p>
           <p className="mt-2 text-sm">5 min</p>
         </div>
         <div className="ft-panel-muted px-4 py-3">
           <p className="ft-text-muted text-sm">Theme</p>
-          <p className="mt-2 text-sm">Auto</p>
+          <p className="mt-2 text-sm">System</p>
         </div>
       </div>
     </Card>

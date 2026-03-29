@@ -6,14 +6,14 @@ export function GamificationScreen() {
       <Card className="ft-panel p-6 lg:col-span-2">
         <CardHeader>
           <CardDescription>Gamification</CardDescription>
-          <CardTitle>Ta progression sera visible ici.</CardTitle>
+          <CardTitle>Your progress will appear here.</CardTitle>
         </CardHeader>
       </Card>
 
       <Card className="ft-panel p-6">
         <CardHeader>
-          <CardDescription>Serie</CardDescription>
-          <CardTitle>0 jour</CardTitle>
+          <CardDescription>Streak</CardDescription>
+          <CardTitle>0 days</CardTitle>
         </CardHeader>
       </Card>
     </div>

@@ -33,27 +33,27 @@ const routes: Array<
   {
     path: "/",
     label: "Focus",
-    title: "Vue d'ensemble",
-    eyebrow: "Aujourd'hui",
-    description: "Reste sur l'essentiel et demarre rapidement.",
+    title: "Overview",
+    eyebrow: "Today",
+    description: "Stay on track and start a session in seconds.",
     icon: TimerReset,
     element: <FocusScreen />,
   },
   {
     path: "/history",
     label: "History",
-    title: "Historique",
+    title: "History",
     eyebrow: "Sessions",
-    description: "Retrouve tes sessions et leur duree.",
+    description: "Review past sessions and their duration.",
     icon: History,
     element: <HistoryScreen />,
   },
   {
     path: "/stats",
     label: "Stats",
-    title: "Statistiques",
-    eyebrow: "Analyse",
-    description: "Observe les tendances et le temps passe.",
+    title: "Stats",
+    eyebrow: "Insights",
+    description: "See your trends and time distribution at a glance.",
     icon: ChartColumnBig,
     element: <StatsScreen />,
   },
@@ -61,26 +61,26 @@ const routes: Array<
     path: "/tracker",
     label: "Tracker",
     title: "Tracker",
-    eyebrow: "Applications",
-    description: "Visualise les apps suivies pendant tes sessions.",
+    eyebrow: "Apps",
+    description: "See which apps were active during your sessions.",
     icon: AppWindow,
     element: <TrackerScreen />,
   },
   {
     path: "/gamification",
     label: "Gamification",
-    title: "Progression",
-    eyebrow: "Regularite",
-    description: "Suis ta serie et tes objectifs.",
+    title: "Progress",
+    eyebrow: "Consistency",
+    description: "Track your streak and weekly goals.",
     icon: Trophy,
     element: <GamificationScreen />,
   },
   {
     path: "/settings",
     label: "Settings",
-    title: "Preferences",
-    eyebrow: "Configuration",
-    description: "Ajuste les presets et les comportements de l'app.",
+    title: "Settings",
+    eyebrow: "Preferences",
+    description: "Adjust presets and app behavior.",
     icon: SlidersHorizontal,
     element: <SettingsScreen />,
   },
@@ -110,23 +110,23 @@ function AppShellFrame() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="ft-panel-muted px-4 py-2 text-sm">
-                  {runtimeHealth.isError ? "Indisponible" : "Local"}
+                  {runtimeHealth.isError ? "Unavailable" : "Local"}
                 </div>
               </TooltipTrigger>
-              <TooltipContent>Les donnees restent sur cette machine.</TooltipContent>
+              <TooltipContent>Your data stays on this device.</TooltipContent>
             </Tooltip>
 
             <Dialog>
               <DialogTrigger asChild>
-                <Button>Nouvelle session</Button>
+                <Button>New session</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle className="ft-font-display text-2xl font-semibold">
-                    Nouvelle session
+                    New session
                   </DialogTitle>
                   <DialogDescription className="ft-text-muted text-sm">
-                    Choisis une duree et lance ton prochain focus.
+                    Pick a duration and start your next focus block.
                   </DialogDescription>
                 </DialogHeader>
 

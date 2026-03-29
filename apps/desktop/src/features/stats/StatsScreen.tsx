@@ -6,13 +6,13 @@ export function StatsScreen() {
       <Card className="ft-panel p-6 lg:col-span-2">
         <CardHeader>
           <CardDescription>Stats</CardDescription>
-          <CardTitle>La tendance apparaitra ici.</CardTitle>
+          <CardTitle>Your trend will show up here.</CardTitle>
         </CardHeader>
       </Card>
 
       <Card className="ft-panel p-6">
         <CardHeader>
-          <CardDescription>Cette semaine</CardDescription>
+          <CardDescription>This week</CardDescription>
           <CardTitle>0 min</CardTitle>
         </CardHeader>
       </Card>

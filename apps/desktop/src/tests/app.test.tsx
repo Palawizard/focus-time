@@ -22,6 +22,6 @@ describe("App", () => {
     render(<App />);
 
     expect(screen.getByText("Focus Time")).toBeInTheDocument();
-    expect(screen.getByText("Vue d'ensemble")).toBeInTheDocument();
+    expect(screen.getByText("Overview")).toBeInTheDocument();
   });
 });

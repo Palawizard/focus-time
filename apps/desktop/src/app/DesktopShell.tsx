@@ -37,7 +37,7 @@ export function DesktopShell({
                 Focus
               </h1>
               <p className="ft-text-muted mt-2 text-sm leading-6">
-                Garde un rythme simple et clair.
+                Keep a steady rhythm with less friction.
               </p>
             </div>
           </div>
@@ -68,7 +68,7 @@ export function DesktopShell({
 
         <div className="ft-panel mt-8 p-4">
           <p className="ft-text-soft text-xs uppercase tracking-[0.22em]">
-            Aujourd&apos;hui
+            Today
           </p>
           <p className="ft-font-display mt-3 text-3xl font-semibold">00:00</p>
         </div>

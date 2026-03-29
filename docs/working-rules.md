@@ -16,7 +16,12 @@ Ces regles s'appliquent a toute la suite du projet.
 - Ne jamais afficher de texte de developpement, de bootstrap, de scaffold, d'epic, de runtime technique ou de commentaire interne a l'utilisateur final.
 - L'interface doit rester simple, minimale et credible comme une application en production.
 
-## 3. Workflow Git par epic
+## 3. Langue du code et du produit
+
+- Tout le code, les noms techniques, les libelles visibles, les tests et les textes presents dans le projet doivent etre ecrits en anglais.
+- Exception explicite : les fichiers Markdown peuvent rester en francais.
+
+## 4. Workflow Git par epic
 
 - Au debut de chaque epic, creer une branche dediee avant de commencer le travail.
 - Les noms de branche doivent etre conventionnels, par exemple `feat/...`, `fix/...`, `chore/...`, suivis d'un nom explicite.
@@ -25,7 +30,7 @@ Ces regles s'appliquent a toute la suite du projet.
 - Attendre une validation explicite de l'utilisateur avant de merger la branche de l'epic dans `dev`.
 - Une fois le merge demande, pousser la branche et `dev`.
 
-## 4. Discipline d'execution
+## 5. Discipline d'execution
 
 - Toujours preferer un travail propre, verifie et coherent avec la doc plutot qu'un scaffold rapide.
 - Quand une erreur de mise en oeuvre contredit ces regles, la corriger avant d'avancer sur l'epic suivant.

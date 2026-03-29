@@ -7,7 +7,7 @@ export function FocusScreen() {
       <Card className="ft-panel p-6">
         <CardHeader>
           <CardDescription>Focus</CardDescription>
-          <CardTitle>Prends un temps pour avancer.</CardTitle>
+          <CardTitle>Make space for deep work.</CardTitle>
         </CardHeader>
 
         <div className="mt-8 grid gap-4 md:grid-cols-3">
@@ -16,7 +16,7 @@ export function FocusScreen() {
             <CardTitle className="mt-3">25 min</CardTitle>
           </Card>
           <Card>
-            <CardDescription>Pause</CardDescription>
+            <CardDescription>Break</CardDescription>
             <CardTitle className="mt-3">5 min</CardTitle>
           </Card>
           <Card>
@@ -26,15 +26,15 @@ export function FocusScreen() {
         </div>
 
         <div className="mt-8 flex flex-wrap gap-3">
-          <Button>Demarrer</Button>
+          <Button>Start</Button>
           <Button variant="secondary">Preset</Button>
         </div>
       </Card>
 
       <Card className="ft-panel p-6">
         <CardHeader>
-          <CardDescription>Session en cours</CardDescription>
-          <CardTitle>Aucune session active.</CardTitle>
+          <CardDescription>Current session</CardDescription>
+          <CardTitle>No active session.</CardTitle>
         </CardHeader>
       </Card>
     </div>
