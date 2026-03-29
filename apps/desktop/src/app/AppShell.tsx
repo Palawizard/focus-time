@@ -2,11 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 
 import { getRuntimeHealth } from "../lib/tauri";
 
-const foundationItems = [
-  "Workspace pnpm configure",
-  "Shell desktop Tauri v2 initialise",
-  "Workspace Rust connecte",
-  "Lint, test et CI prets",
+const focusStats = [
+  { label: "Aujourd'hui", value: "0 min" },
+  { label: "Sessions", value: "0" },
+  { label: "Serie", value: "0 jour" },
 ] as const;
 
 export function AppShell() {
@@ -25,46 +24,41 @@ export function AppShell() {
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(22rem,1fr)]">
             <div className="space-y-4">
               <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-                Pomodoro, app tracking et statistiques dans un shell desktop
-                propre.
+                Reste concentre. Une session a la fois.
               </h1>
               <p className="max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
-                Cette base pose le monorepo, Tauri v2, React, le workspace Rust
-                et la chaine qualite. Les epics produit peuvent maintenant etre
-                construites sans repartir du scaffold brut.
+                Suis ton temps, garde ton rythme et retrouve tes sessions en un
+                coup d'oeil.
               </p>
             </div>
 
             <div className="rounded-[24px] border border-cyan-400/20 bg-slate-950/50 p-5">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-medium text-slate-200">
-                  Runtime health
+                  Etat
                 </h2>
-                <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-xs text-emerald-200">
-                  bootstrap
-                </span>
               </div>
 
               {runtimeHealth.isLoading ? (
                 <p className="text-sm text-slate-400">
-                  Initialisation du runtime natif...
+                  Preparation en cours...
                 </p>
               ) : runtimeHealth.isError ? (
                 <p className="text-sm text-rose-300">
-                  Le shell Tauri n&apos;a pas encore repondu.
+                  Impossible de charger l'application.
                 </p>
               ) : (
                 <dl className="space-y-3 text-sm">
                   <div className="flex justify-between gap-4">
-                    <dt className="text-slate-400">Produit</dt>
+                    <dt className="text-slate-400">Application</dt>
                     <dd className="text-slate-100">
                       {runtimeHealth.data.productName}
                     </dd>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <dt className="text-slate-400">Shell</dt>
+                    <dt className="text-slate-400">Suivi</dt>
                     <dd className="text-slate-100">
-                      {runtimeHealth.data.desktopShell}
+                      Pret
                     </dd>
                   </div>
                   <div className="flex justify-between gap-4">
@@ -74,9 +68,9 @@ export function AppShell() {
                     </dd>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <dt className="text-slate-400">Persistence</dt>
+                    <dt className="text-slate-400">Stockage</dt>
                     <dd className="text-slate-100">
-                      {runtimeHealth.data.persistenceMode}
+                      Local
                     </dd>
                   </div>
                 </dl>
@@ -86,39 +80,36 @@ export function AppShell() {
         </header>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {foundationItems.map((item) => (
+          {focusStats.map((item) => (
             <article
-              key={item}
+              key={item.label}
               className="rounded-[24px] border border-white/10 bg-white/5 p-5"
             >
-              <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                Epic 0
-              </p>
-              <h2 className="mt-3 text-lg font-medium text-white">{item}</h2>
+              <p className="text-sm text-slate-400">{item.label}</p>
+              <h2 className="mt-3 text-2xl font-medium text-white">
+                {item.value}
+              </h2>
             </article>
           ))}
+
+          <article className="rounded-[24px] border border-white/10 bg-white/5 p-5">
+            <p className="text-sm text-slate-400">Top app</p>
+            <h2 className="mt-3 text-2xl font-medium text-white">Aucune</h2>
+          </article>
         </section>
 
         <section className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(18rem,1fr)]">
           <article className="rounded-[24px] border border-white/10 bg-slate-950/40 p-6">
-            <h2 className="text-lg font-medium text-white">
-              Prochaine etape logique
-            </h2>
+            <h2 className="text-lg font-medium text-white">Session</h2>
             <p className="mt-3 text-sm leading-7 text-slate-300">
-              L&apos;epic 1 peut maintenant se concentrer sur le design system,
-              la navigation et les ecrans vides sans melanger ces sujets avec
-              la plomberie desktop, la toolchain Rust et la CI.
+              Aucune session en cours.
             </p>
           </article>
 
           <article className="rounded-[24px] border border-white/10 bg-white/5 p-6">
-            <h2 className="text-lg font-medium text-white">
-              Crates connectees
-            </h2>
+            <h2 className="text-lg font-medium text-white">Applications</h2>
             <ul className="mt-3 space-y-2 text-sm text-slate-300">
-              {(runtimeHealth.data?.workspaceCrates ?? []).map((crateName) => (
-                <li key={crateName}>{crateName}</li>
-              ))}
+              <li>Le suivi apparaitra ici pendant les sessions.</li>
             </ul>
           </article>
         </section>

@@ -1,5 +1,5 @@
 export const bootstrapRoute = {
   id: "focus",
   label: "Focus",
-  description: "Shell desktop initial et statut du runtime",
+  description: "Vue principale de concentration",
 } as const;

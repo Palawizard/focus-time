@@ -23,7 +23,7 @@ describe("App", () => {
 
     expect(screen.getByText("Focus Time")).toBeInTheDocument();
     expect(
-      screen.getByText(/Pomodoro, app tracking et statistiques/i),
+      screen.getByText(/Reste concentre. Une session a la fois./i),
     ).toBeInTheDocument();
   });
 });
