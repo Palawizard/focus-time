@@ -14,7 +14,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<ButtonVariant, string> = {
   default:
-    "bg-[var(--color-brand)] text-[#0f1515] hover:opacity-95 active:opacity-90",
+    "bg-[var(--color-brand)] text-white hover:brightness-105 active:brightness-95",
   secondary:
     "bg-[var(--color-surface-muted)] text-[var(--color-text)] hover:bg-white/10",
   ghost:
