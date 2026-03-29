@@ -108,6 +108,25 @@ body {
   background: var(--color-surface-muted);
 }
 
+.ft-interactive-panel {
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.ft-interactive-panel:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-brand-soft);
+  transform: translateY(-1px);
+}
+
+.ft-interactive-panel:active {
+  transform: translateY(0);
+}
+
 .ft-kicker {
   color: var(--color-accent);
   letter-spacing: 0.3em;

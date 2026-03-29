@@ -39,7 +39,7 @@ export function Button({
   return (
     <Comp
       className={cn(
-        "inline-flex items-center justify-center rounded-[1rem] border border-transparent text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex cursor-pointer items-center justify-center rounded-[1rem] border border-transparent text-sm font-medium transition-[background-color,border-color,color,transform,filter] active:scale-[0.99] disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-50",
         variantClasses[variant],
         sizeClasses[size],
         className,

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { Button } from "../../components/ui/Button";
@@ -59,15 +60,58 @@ export function FocusScreen() {
   const stopMutation = useMutation({ mutationFn: stopPomodoro });
   const skipMutation = useMutation({ mutationFn: skipPomodoroBreak });
 
+  const preferenceLabel = "Custom";
+  const preferenceFocusMinutes = userPreferences.data?.focusMinutes ?? 25;
+  const preferenceShortBreakMinutes =
+    userPreferences.data?.shortBreakMinutes ?? 5;
+  const preferenceLongBreakMinutes = userPreferences.data?.longBreakMinutes ?? 15;
+  const preferenceSessionsUntilLongBreak =
+    userPreferences.data?.sessionsUntilLongBreak ?? 4;
+  const preferenceAutoStartBreaks =
+    userPreferences.data?.autoStartBreaks ?? false;
+  const preferenceAutoStartFocus = userPreferences.data?.autoStartFocus ?? false;
   const preferencePreset: StartPomodoroRequest = {
-    label: "Custom",
-    focusMinutes: userPreferences.data?.focusMinutes ?? 25,
-    shortBreakMinutes: userPreferences.data?.shortBreakMinutes ?? 5,
-    longBreakMinutes: userPreferences.data?.longBreakMinutes ?? 15,
-    sessionsUntilLongBreak: userPreferences.data?.sessionsUntilLongBreak ?? 4,
-    autoStartBreaks: userPreferences.data?.autoStartBreaks ?? false,
-    autoStartFocus: userPreferences.data?.autoStartFocus ?? false,
+    label: preferenceLabel,
+    focusMinutes: preferenceFocusMinutes,
+    shortBreakMinutes: preferenceShortBreakMinutes,
+    longBreakMinutes: preferenceLongBreakMinutes,
+    sessionsUntilLongBreak: preferenceSessionsUntilLongBreak,
+    autoStartBreaks: preferenceAutoStartBreaks,
+    autoStartFocus: preferenceAutoStartFocus,
   };
+  const [selectedPreset, setSelectedPreset] =
+    useState<StartPomodoroRequest | null>(null);
+
+  useEffect(() => {
+    if (snapshot.controlState !== "idle" || selectedPreset !== null) {
+      return;
+    }
+
+    setSelectedPreset({
+      label: preferenceLabel,
+      focusMinutes: preferenceFocusMinutes,
+      shortBreakMinutes: preferenceShortBreakMinutes,
+      longBreakMinutes: preferenceLongBreakMinutes,
+      sessionsUntilLongBreak: preferenceSessionsUntilLongBreak,
+      autoStartBreaks: preferenceAutoStartBreaks,
+      autoStartFocus: preferenceAutoStartFocus,
+    });
+  }, [
+    preferenceAutoStartBreaks,
+    preferenceAutoStartFocus,
+    preferenceFocusMinutes,
+    preferenceLabel,
+    preferenceLongBreakMinutes,
+    preferenceSessionsUntilLongBreak,
+    preferenceShortBreakMinutes,
+    selectedPreset,
+    snapshot.controlState,
+  ]);
+
+  const configuredPreset =
+    snapshot.controlState === "idle"
+      ? (selectedPreset ?? preferencePreset)
+      : snapshot.preset;
   const phaseLabel =
     snapshot.phase === "focus"
       ? "Focus"
@@ -76,18 +120,6 @@ export function FocusScreen() {
         : snapshot.phase === "longBreak"
           ? "Long break"
           : "Ready";
-  const statusLabel =
-    snapshot.controlState === "running"
-      ? "Running"
-      : snapshot.controlState === "paused"
-        ? "Paused"
-        : snapshot.outcome === "completed"
-          ? "Complete"
-          : snapshot.outcome === "interrupted"
-            ? "Stopped"
-            : snapshot.outcome === "skippedBreak"
-              ? "Break skipped"
-              : "Idle";
   const remainingLabel = formatDuration(snapshot.remainingSeconds);
   const phaseProgress =
     snapshot.phaseTotalSeconds > 0
@@ -110,15 +142,19 @@ export function FocusScreen() {
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           <Card>
             <CardDescription>Preset</CardDescription>
-            <CardTitle className="mt-3">{snapshot.preset.label}</CardTitle>
+            <CardTitle className="mt-3">{configuredPreset.label}</CardTitle>
           </Card>
           <Card>
-            <CardDescription>Phase</CardDescription>
-            <CardTitle className="mt-3">{phaseLabel}</CardTitle>
+            <CardDescription>Focus</CardDescription>
+            <CardTitle className="mt-3">
+              {configuredPreset.focusMinutes} min
+            </CardTitle>
           </Card>
           <Card>
-            <CardDescription>Status</CardDescription>
-            <CardTitle className="mt-3">{statusLabel}</CardTitle>
+            <CardDescription>Break</CardDescription>
+            <CardTitle className="mt-3">
+              {configuredPreset.shortBreakMinutes} min
+            </CardTitle>
           </Card>
         </div>
 
@@ -141,7 +177,7 @@ export function FocusScreen() {
 
         <div className="mt-8 flex flex-wrap gap-3">
           {snapshot.controlState === "idle" ? (
-            <Button onClick={() => startMutation.mutate(preferencePreset)}>
+            <Button onClick={() => startMutation.mutate(configuredPreset)}>
               Start
             </Button>
           ) : null}
@@ -168,24 +204,22 @@ export function FocusScreen() {
 
         <div className="mt-8 grid gap-3 md:grid-cols-3">
           {quickPresets.map((preset) => (
-            <button
+            <PresetButton
               key={preset.label}
-              className="ft-panel-muted rounded-[1rem] px-4 py-4 text-left transition-colors hover:bg-[var(--color-brand-soft)]"
+              active={
+                snapshot.controlState === "idle" &&
+                configuredPreset.label === preset.label
+              }
+              disabled={snapshot.controlState !== "idle"}
               onClick={() =>
-                startMutation.mutate({
+                setSelectedPreset({
                   ...preset,
-                  autoStartBreaks: preferencePreset.autoStartBreaks,
-                  autoStartFocus: preferencePreset.autoStartFocus,
+                  autoStartBreaks: preferenceAutoStartBreaks,
+                  autoStartFocus: preferenceAutoStartFocus,
                 })
               }
-              type="button"
-            >
-              <p className="text-sm font-medium">{preset.label}</p>
-              <p className="ft-text-muted mt-2 text-sm">
-                {preset.focusMinutes} min focus · {preset.shortBreakMinutes} min
-                break
-              </p>
-            </button>
+              preset={preset}
+            />
           ))}
         </div>
       </Card>
@@ -195,7 +229,7 @@ export function FocusScreen() {
           <CardDescription>Current session</CardDescription>
           <CardTitle>
             {snapshot.controlState === "idle"
-              ? "Ready for the next block."
+              ? `${configuredPreset.label} is ready.`
               : `${snapshot.preset.label} in progress.`}
           </CardTitle>
         </CardHeader>
@@ -210,13 +244,13 @@ export function FocusScreen() {
           <div className="ft-panel-muted px-4 py-3">
             <p className="ft-text-muted text-sm">Auto-start break</p>
             <p className="mt-2 text-sm">
-              {snapshot.autoStartBreaks ? "On" : "Off"}
+              {configuredPreset.autoStartBreaks ? "On" : "Off"}
             </p>
           </div>
           <div className="ft-panel-muted px-4 py-3">
             <p className="ft-text-muted text-sm">Auto-start focus</p>
             <p className="mt-2 text-sm">
-              {snapshot.autoStartFocus ? "On" : "Off"}
+              {configuredPreset.autoStartFocus ? "On" : "Off"}
             </p>
           </div>
           <div className="ft-panel-muted px-4 py-3">
@@ -242,6 +276,50 @@ export function FocusScreen() {
         </div>
       </Card>
     </div>
+  );
+}
+
+interface PresetButtonProps {
+  active: boolean;
+  disabled: boolean;
+  onClick: () => void;
+  preset: (typeof quickPresets)[number];
+}
+
+function PresetButton({
+  active,
+  disabled,
+  onClick,
+  preset,
+}: PresetButtonProps) {
+  return (
+    <button
+      className={[
+        "ft-panel-muted ft-interactive-panel rounded-[1rem] px-4 py-4 text-left",
+        active
+          ? "border-[var(--color-border-strong)] bg-[var(--color-brand-soft)] shadow-[0_14px_32px_rgba(0,0,0,0.12)]"
+          : "",
+        disabled ? "cursor-not-allowed opacity-60" : "",
+      ].join(" ")}
+      disabled={disabled}
+      onClick={onClick}
+      type="button"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium">{preset.label}</p>
+          <p className="ft-text-muted mt-2 text-sm">
+            {preset.focusMinutes} min focus · {preset.shortBreakMinutes} min
+            break
+          </p>
+        </div>
+        {active ? (
+          <span className="ft-brand-badge rounded-full px-2.5 py-1 text-[11px] font-semibold">
+            Ready
+          </span>
+        ) : null}
+      </div>
+    </button>
   );
 }
 
