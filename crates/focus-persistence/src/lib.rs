@@ -2,6 +2,7 @@ mod connection;
 mod migrations;
 mod repositories;
 mod schema;
+mod seed;
 
 use serde::Serialize;
 use thiserror::Error;
@@ -16,6 +17,7 @@ pub use repositories::{
     UpsertTrackedAppInput,
 };
 pub use schema::{initial_schema, DatabaseSchema, TableDefinition};
+pub use seed::{seed_development_data, DevelopmentSeedReport};
 
 pub const fn crate_name() -> &'static str {
     "focus-persistence"

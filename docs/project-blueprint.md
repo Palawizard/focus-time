@@ -247,7 +247,7 @@ Definition de fini :
 - [x] Ajouter les migrations SQL versionnees.
 - [x] Implementer les repositories Rust pour sessions, preferences, apps trackees et stats.
 - [x] Exposer des commandes Tauri pour lire et ecrire les donnees principales.
-- [ ] Ajouter une couche de seed ou fixtures de dev.
+- [x] Ajouter une couche de seed ou fixtures de dev.
 - [ ] Verifier les migrations sur base vide et base existante.
 
 Definition de fini :

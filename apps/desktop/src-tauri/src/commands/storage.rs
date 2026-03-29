@@ -1,5 +1,6 @@
 use chrono::NaiveDate;
 use focus_domain::{DailyStat, Session, SessionSegment, SessionSegmentKind, SessionStatus, TrackedApp, UserPreference};
+use focus_persistence::DevelopmentSeedReport;
 use focus_persistence::UpsertTrackedAppInput;
 use serde::Deserialize;
 
@@ -221,6 +222,17 @@ pub async fn save_daily_stat(
             request.interrupted_sessions,
             request.top_app_id,
         )
+        .await
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn seed_development_fixtures(
+    state: tauri::State<'_, AppState>,
+) -> Result<DevelopmentSeedReport, String> {
+    state
+        .storage
+        .seed_development_data()
         .await
         .map_err(|error| error.to_string())
 }

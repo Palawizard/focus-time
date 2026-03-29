@@ -10,7 +10,7 @@ use bootstrap::build_state;
 use commands::{
     create_session, create_session_segment, get_runtime_health, get_user_preferences,
     list_daily_stats, list_session_segments, list_sessions, list_tracked_apps, save_daily_stat,
-    save_user_preferences, upsert_tracked_app,
+    save_user_preferences, seed_development_fixtures, upsert_tracked_app,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -33,7 +33,8 @@ pub fn run() {
             list_tracked_apps,
             upsert_tracked_app,
             list_daily_stats,
-            save_daily_stat
+            save_daily_stat,
+            seed_development_fixtures
         ])
         .run(tauri::generate_context!())
         .expect("error while running Focus Time desktop application");

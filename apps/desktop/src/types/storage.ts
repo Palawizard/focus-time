@@ -93,3 +93,10 @@ export interface SaveDailyStatRequest {
   interruptedSessions: number;
   topAppId?: number | null;
 }
+
+export interface DevelopmentSeedReport {
+  skipped: boolean;
+  sessionsInserted: number;
+  trackedAppsUpserted: number;
+  dailyStatsUpserted: number;
+}

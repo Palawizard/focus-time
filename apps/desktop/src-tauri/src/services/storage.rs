@@ -4,8 +4,9 @@ use anyhow::Context;
 use chrono::{NaiveDate, Utc};
 use focus_domain::{DailyStat, Session, SessionSegment, SessionStatus, TrackedApp, UserPreference};
 use focus_persistence::{
-    connect_database, run_migrations, CreateSessionInput, CreateSessionSegmentInput,
-    Repositories, SaveDailyStatInput, UpsertTrackedAppInput,
+    connect_database, run_migrations, seed_development_data, CreateSessionInput,
+    CreateSessionSegmentInput, DevelopmentSeedReport, Repositories, SaveDailyStatInput,
+    UpsertTrackedAppInput,
 };
 use sqlx::SqlitePool;
 
@@ -129,6 +130,10 @@ impl StorageService {
             })
             .await
             .map_err(Into::into)
+    }
+
+    pub async fn seed_development_data(&self) -> anyhow::Result<DevelopmentSeedReport> {
+        seed_development_data(&self.pool).await.map_err(Into::into)
     }
 
     pub async fn ensure_ready(&self) -> anyhow::Result<()> {

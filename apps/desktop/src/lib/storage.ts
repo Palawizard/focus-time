@@ -4,6 +4,7 @@ import type {
   CreateSessionRequest,
   CreateSessionSegmentRequest,
   DailyStat,
+  DevelopmentSeedReport,
   SaveDailyStatRequest,
   Session,
   SessionSegment,
@@ -50,4 +51,8 @@ export function listDailyStats(limit = 30) {
 
 export function saveDailyStat(request: SaveDailyStatRequest) {
   return invoke<DailyStat>("save_daily_stat", { request });
+}
+
+export function seedDevelopmentFixtures() {
+  return invoke<DevelopmentSeedReport>("seed_development_fixtures");
 }
