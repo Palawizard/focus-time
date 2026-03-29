@@ -232,7 +232,7 @@ Definition de fini :
 - [x] Definir les tokens visuels : couleurs, surfaces, typographie, espacements, ombres.
 - [x] Mettre en place le layout principal avec sidebar ou navigation compacte.
 - [x] Integrer `Radix UI` et creer les primitives de base : button, card, dialog, tabs, tooltip.
-- [ ] Creer les ecrans vides : Focus, History, Stats, Tracker, Gamification, Settings.
+- [x] Creer les ecrans vides : Focus, History, Stats, Tracker, Gamification, Settings.
 - [ ] Poser la navigation et les routes.
 - [ ] Ajouter le theming clair/sombre seulement si necessaire au produit.
 
