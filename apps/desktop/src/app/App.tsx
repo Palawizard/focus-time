@@ -3,6 +3,7 @@ import { HashRouter } from "react-router-dom";
 
 import { AppShell } from "./AppShell";
 import { usePomodoroBridge } from "../hooks/usePomodoroBridge";
+import { usePomodoroNotifications } from "../hooks/usePomodoroNotifications";
 import { useApplyTheme } from "../hooks/useApplyTheme";
 
 const queryClient = new QueryClient();
@@ -10,6 +11,7 @@ const queryClient = new QueryClient();
 function AppRoot() {
   useApplyTheme();
   usePomodoroBridge();
+  usePomodoroNotifications();
 
   return <AppShell />;
 }

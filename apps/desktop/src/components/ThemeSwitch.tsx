@@ -9,9 +9,9 @@ const themeOptions: Array<{
   label: string;
   mode: ThemeMode;
 }> = [
-  { mode: "light", label: "Clair", icon: SunMedium },
-  { mode: "dark", label: "Sombre", icon: MoonStar },
-  { mode: "system", label: "Auto", icon: LaptopMinimal },
+  { mode: "light", label: "Light", icon: SunMedium },
+  { mode: "dark", label: "Dark", icon: MoonStar },
+  { mode: "system", label: "System", icon: LaptopMinimal },
 ];
 
 export function ThemeSwitch() {

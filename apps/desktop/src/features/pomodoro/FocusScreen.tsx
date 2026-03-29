@@ -10,6 +10,7 @@ import {
   stopPomodoro,
 } from "../../lib/pomodoro";
 import { getUserPreferences, listSessions } from "../../lib/storage";
+import { usePomodoroPreferencesStore } from "../../stores/pomodoro-preferences-store";
 import { usePomodoroStore } from "../../stores/pomodoro-store";
 import type { StartPomodoroRequest } from "../../types/pomodoro";
 
@@ -39,6 +40,8 @@ const quickPresets = [
 
 export function FocusScreen() {
   const snapshot = usePomodoroStore((state) => state.snapshot);
+  const soundEnabled = usePomodoroPreferencesStore((state) => state.soundEnabled);
+  const toggleSound = usePomodoroPreferencesStore((state) => state.toggleSound);
   const userPreferences = useQuery({
     queryKey: ["user-preferences"],
     queryFn: getUserPreferences,
@@ -158,6 +161,9 @@ export function FocusScreen() {
               Skip break
             </Button>
           ) : null}
+          <Button onClick={toggleSound} variant="ghost">
+            {soundEnabled ? "Sound on" : "Sound off"}
+          </Button>
         </div>
 
         <div className="mt-8 grid gap-3 md:grid-cols-3">
@@ -195,6 +201,12 @@ export function FocusScreen() {
         </CardHeader>
 
         <div className="mt-8 grid gap-3">
+          <div className="ft-panel-muted px-4 py-3">
+            <p className="ft-text-muted text-sm">Notifications</p>
+            <p className="mt-2 text-sm">
+              {userPreferences.data?.notificationsEnabled ? "On" : "Off"}
+            </p>
+          </div>
           <div className="ft-panel-muted px-4 py-3">
             <p className="ft-text-muted text-sm">Auto-start break</p>
             <p className="mt-2 text-sm">
