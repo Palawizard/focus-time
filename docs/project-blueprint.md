@@ -244,7 +244,7 @@ Definition de fini :
 ### Epic 2 - Modele de donnees et persistance locale
 
 - [x] Concevoir le schema SQLite initial.
-- [ ] Ajouter les migrations SQL versionnees.
+- [x] Ajouter les migrations SQL versionnees.
 - [ ] Implementer les repositories Rust pour sessions, preferences, apps trackees et stats.
 - [ ] Exposer des commandes Tauri pour lire et ecrire les donnees principales.
 - [ ] Ajouter une couche de seed ou fixtures de dev.

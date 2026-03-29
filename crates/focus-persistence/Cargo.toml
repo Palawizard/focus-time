@@ -7,3 +7,5 @@ authors.workspace = true
 
 [dependencies]
 serde.workspace = true
+sqlx.workspace = true
+thiserror.workspace = true

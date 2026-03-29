@@ -1,7 +1,11 @@
+mod migrations;
 mod schema;
 
 use serde::Serialize;
 
+pub use migrations::{
+    list_applied_migrations, run_migrations, AppliedMigration, MigrationDefinition, MigrationError,
+};
 pub use schema::{initial_schema, DatabaseSchema, TableDefinition};
 
 pub const fn crate_name() -> &'static str {
