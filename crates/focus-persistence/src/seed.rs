@@ -157,7 +157,10 @@ pub async fn seed_development_data(
 
     upsert_daily_stat(
         &mut *connection,
-        &(now - Duration::days(1)).date_naive().format("%Y-%m-%d").to_string(),
+        &(now - Duration::days(1))
+            .date_naive()
+            .format("%Y-%m-%d")
+            .to_string(),
         1_500,
         300,
         1,
@@ -224,6 +227,7 @@ async fn upsert_tracked_app(
     Ok(app_id)
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn insert_session(
     connection: &mut sqlx::SqliteConnection,
     started_at: String,

@@ -248,7 +248,7 @@ Definition de fini :
 - [x] Implementer les repositories Rust pour sessions, preferences, apps trackees et stats.
 - [x] Exposer des commandes Tauri pour lire et ecrire les donnees principales.
 - [x] Ajouter une couche de seed ou fixtures de dev.
-- [ ] Verifier les migrations sur base vide et base existante.
+- [x] Verifier les migrations sur base vide et base existante.
 
 Definition de fini :
 

@@ -11,3 +11,7 @@ focus-domain = { path = "../focus-domain" }
 serde.workspace = true
 sqlx.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+tempfile = "3.23"
+tokio.workspace = true

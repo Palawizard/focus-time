@@ -26,7 +26,11 @@ impl StorageService {
     }
 
     pub async fn list_sessions(&self, limit: u32) -> anyhow::Result<Vec<Session>> {
-        self.repositories.sessions.list(limit).await.map_err(Into::into)
+        self.repositories
+            .sessions
+            .list(limit)
+            .await
+            .map_err(Into::into)
     }
 
     pub async fn create_session(
@@ -72,7 +76,11 @@ impl StorageService {
     }
 
     pub async fn get_user_preferences(&self) -> anyhow::Result<UserPreference> {
-        self.repositories.preferences.get().await.map_err(Into::into)
+        self.repositories
+            .preferences
+            .get()
+            .await
+            .map_err(Into::into)
     }
 
     pub async fn save_user_preferences(
@@ -87,7 +95,11 @@ impl StorageService {
     }
 
     pub async fn list_tracked_apps(&self) -> anyhow::Result<Vec<TrackedApp>> {
-        self.repositories.tracked_apps.list().await.map_err(Into::into)
+        self.repositories
+            .tracked_apps
+            .list()
+            .await
+            .map_err(Into::into)
     }
 
     pub async fn upsert_tracked_app(

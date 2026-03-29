@@ -288,7 +288,10 @@ impl PreferencesRepository {
         row.try_into_domain()
     }
 
-    pub async fn save(&self, preferences: &UserPreference) -> Result<UserPreference, PersistenceError> {
+    pub async fn save(
+        &self,
+        preferences: &UserPreference,
+    ) -> Result<UserPreference, PersistenceError> {
         sqlx::query(
             r#"
             UPDATE user_preferences
@@ -346,7 +349,9 @@ impl TrackedAppRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        rows.into_iter().map(TrackedAppRow::try_into_domain).collect()
+        rows.into_iter()
+            .map(TrackedAppRow::try_into_domain)
+            .collect()
     }
 
     pub async fn upsert(
@@ -422,7 +427,9 @@ impl DailyStatRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        rows.into_iter().map(DailyStatRow::try_into_domain).collect()
+        rows.into_iter()
+            .map(DailyStatRow::try_into_domain)
+            .collect()
     }
 
     pub async fn upsert(&self, input: SaveDailyStatInput) -> Result<DailyStat, PersistenceError> {
@@ -501,7 +508,10 @@ impl SessionRow {
         Ok(Session {
             id: self.id,
             started_at: parse_datetime(&self.started_at)?,
-            ended_at: self.ended_at.map(|value| parse_datetime(&value)).transpose()?,
+            ended_at: self
+                .ended_at
+                .map(|value| parse_datetime(&value))
+                .transpose()?,
             planned_focus_minutes: self.planned_focus_minutes,
             actual_focus_seconds: self.actual_focus_seconds,
             break_seconds: self.break_seconds,

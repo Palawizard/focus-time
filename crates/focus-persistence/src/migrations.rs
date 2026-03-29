@@ -90,10 +90,11 @@ pub async fn list_applied_migrations(
 ) -> Result<Vec<AppliedMigration>, MigrationError> {
     ensure_migrations_table(pool).await?;
 
-    let rows =
-        sqlx::query_as::<_, (i64, String)>("SELECT version, name FROM __focus_time_migrations ORDER BY version")
-            .fetch_all(pool)
-            .await?;
+    let rows = sqlx::query_as::<_, (i64, String)>(
+        "SELECT version, name FROM __focus_time_migrations ORDER BY version",
+    )
+    .fetch_all(pool)
+    .await?;
 
     Ok(rows
         .into_iter()

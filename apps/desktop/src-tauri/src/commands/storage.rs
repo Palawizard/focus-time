@@ -1,5 +1,8 @@
 use chrono::NaiveDate;
-use focus_domain::{DailyStat, Session, SessionSegment, SessionSegmentKind, SessionStatus, TrackedApp, UserPreference};
+use focus_domain::{
+    DailyStat, Session, SessionSegment, SessionSegmentKind, SessionStatus, TrackedApp,
+    UserPreference,
+};
 use focus_persistence::DevelopmentSeedReport;
 use focus_persistence::UpsertTrackedAppInput;
 use serde::Deserialize;
