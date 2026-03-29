@@ -8,9 +8,11 @@ use tauri::Manager;
 
 use bootstrap::build_state;
 use commands::{
-    create_session, create_session_segment, get_runtime_health, get_user_preferences,
-    list_daily_stats, list_session_segments, list_sessions, list_tracked_apps, save_daily_stat,
-    save_user_preferences, seed_development_fixtures, upsert_tracked_app,
+    create_session, create_session_segment, get_pomodoro_state, get_runtime_health,
+    get_user_preferences, list_daily_stats, list_session_segments, list_sessions,
+    list_tracked_apps, pause_pomodoro, resume_pomodoro, save_daily_stat,
+    save_user_preferences, seed_development_fixtures, skip_pomodoro_break, start_pomodoro,
+    stop_pomodoro, upsert_tracked_app,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -24,6 +26,12 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_runtime_health,
+            get_pomodoro_state,
+            start_pomodoro,
+            pause_pomodoro,
+            resume_pomodoro,
+            stop_pomodoro,
+            skip_pomodoro_break,
             list_sessions,
             create_session,
             list_session_segments,
