@@ -270,14 +270,14 @@ Definition de fini :
 
 ### Epic 4 - App Tracker
 
-- [ ] Definir le format commun d'un evenement de tracking.
-- [ ] Implementer l'adaptateur Windows de detection d'application/fenetre active.
-- [ ] Implementer l'adaptateur Linux X11.
-- [ ] Ajouter une strategie Linux Wayland de degradation elegante avec message clair si non supporte.
-- [ ] Normaliser les noms d'applications et executables.
-- [ ] Enregistrer les segments de temps par app pendant une session active.
-- [ ] Ajouter les exclusions utilisateur par executable, titre de fenetre ou categorie.
-- [ ] Mettre en place une permission explicite et un onboarding clair sur le tracking.
+- [x] Definir le format commun d'un evenement de tracking.
+- [x] Implementer l'adaptateur Windows de detection d'application/fenetre active.
+- [x] Implementer l'adaptateur Linux X11.
+- [x] Ajouter une strategie Linux Wayland de degradation elegante avec message clair si non supporte.
+- [x] Normaliser les noms d'applications et executables.
+- [x] Enregistrer les segments de temps par app pendant une session active.
+- [x] Ajouter les exclusions utilisateur par executable, titre de fenetre ou categorie.
+- [x] Mettre en place une permission explicite et un onboarding clair sur le tracking.
 
 Definition de fini :
 
