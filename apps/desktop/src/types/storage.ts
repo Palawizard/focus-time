@@ -1,6 +1,25 @@
 export type SessionStatus = "planned" | "in_progress" | "completed" | "cancelled";
 export type SessionSegmentKind = "focus" | "break" | "idle";
 export type ThemePreference = "system" | "light" | "dark";
+export type TrackingCategory =
+  | "development"
+  | "browser"
+  | "communication"
+  | "writing"
+  | "design"
+  | "meeting"
+  | "research"
+  | "utilities"
+  | "unknown";
+export type TrackingExclusionKind = "executable" | "window_title" | "category";
+export type TrackingMode =
+  | "windows_native"
+  | "linux_hyprland"
+  | "linux_sway"
+  | "linux_x11"
+  | "linux_wayland"
+  | "unsupported";
+export type TrackingCapability = "supported" | "limited" | "unsupported";
 
 export interface Session {
   id: number;
@@ -32,10 +51,57 @@ export interface TrackedApp {
   id: number;
   name: string;
   executable: string;
+  category: TrackingCategory;
   colorHex: string | null;
   isExcluded: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface TrackedWindowEvent {
+  id: number;
+  sessionId: number | null;
+  trackedAppId: number | null;
+  appName: string | null;
+  executable: string | null;
+  category: TrackingCategory | null;
+  windowTitle: string | null;
+  startedAt: string;
+  endedAt: string | null;
+  createdAt: string;
+}
+
+export interface TrackingExclusionRule {
+  id: number;
+  kind: TrackingExclusionKind;
+  pattern: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TrackingStatus {
+  mode: TrackingMode;
+  capability: TrackingCapability;
+  message: string;
+  dependencyHint: string | null;
+}
+
+export interface ActiveWindowSample {
+  appName: string;
+  executable: string;
+  category: TrackingCategory;
+  windowTitle: string | null;
+}
+
+export interface TrackingRuntimeSnapshot {
+  status: TrackingStatus;
+  trackingEnabled: boolean;
+  permissionGranted: boolean;
+  onboardingCompleted: boolean;
+  activeSessionId: number | null;
+  activeWindow: ActiveWindowSample | null;
+  lastError: string | null;
+  isTrackingLive: boolean;
 }
 
 export interface DailyStat {
@@ -56,6 +122,8 @@ export interface UserPreference {
   autoStartBreaks: boolean;
   autoStartFocus: boolean;
   trackingEnabled: boolean;
+  trackingPermissionGranted: boolean;
+  trackingOnboardingCompleted: boolean;
   notificationsEnabled: boolean;
   theme: ThemePreference;
   updatedAt: string;
@@ -81,8 +149,14 @@ export interface CreateSessionSegmentRequest {
 export interface UpsertTrackedAppRequest {
   name: string;
   executable: string;
+  category: TrackingCategory;
   colorHex?: string | null;
   isExcluded: boolean;
+}
+
+export interface CreateTrackingExclusionRuleRequest {
+  kind: TrackingExclusionKind;
+  pattern: string;
 }
 
 export interface SaveDailyStatRequest {

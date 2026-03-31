@@ -74,6 +74,8 @@ vi.mock("../lib/storage", async () => {
       autoStartBreaks: false,
       autoStartFocus: false,
       trackingEnabled: true,
+      trackingPermissionGranted: true,
+      trackingOnboardingCompleted: true,
       notificationsEnabled: true,
       theme: "system",
       updatedAt: "2026-03-29T00:00:00Z",

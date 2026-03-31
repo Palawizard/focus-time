@@ -1,5 +1,15 @@
 import "@testing-library/jest-dom/vitest";
 
+Object.defineProperty(window, "localStorage", {
+  writable: true,
+  value: {
+    getItem: () => null,
+    setItem: () => undefined,
+    removeItem: () => undefined,
+    clear: () => undefined,
+  },
+});
+
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: (query: string) => ({

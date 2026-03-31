@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  CreateTrackingExclusionRuleRequest,
   CreateSessionRequest,
   CreateSessionSegmentRequest,
   DailyStat,
@@ -9,6 +10,9 @@ import type {
   Session,
   SessionSegment,
   TrackedApp,
+  TrackedWindowEvent,
+  TrackingExclusionRule,
+  TrackingRuntimeSnapshot,
   UpsertTrackedAppRequest,
   UserPreference,
 } from "../types/storage";
@@ -43,6 +47,30 @@ export function listTrackedApps() {
 
 export function upsertTrackedApp(request: UpsertTrackedAppRequest) {
   return invoke<TrackedApp>("upsert_tracked_app", { request });
+}
+
+export function getTrackingStatus() {
+  return invoke<TrackingRuntimeSnapshot>("get_tracking_status");
+}
+
+export function listTrackedWindowEvents(limit = 30) {
+  return invoke<TrackedWindowEvent[]>("list_tracked_window_events", { limit });
+}
+
+export function listTrackingExclusionRules() {
+  return invoke<TrackingExclusionRule[]>("list_tracking_exclusion_rules");
+}
+
+export function createTrackingExclusionRule(
+  request: CreateTrackingExclusionRuleRequest,
+) {
+  return invoke<TrackingExclusionRule>("create_tracking_exclusion_rule", {
+    request,
+  });
+}
+
+export function deleteTrackingExclusionRule(ruleId: number) {
+  return invoke<void>("delete_tracking_exclusion_rule", { ruleId });
 }
 
 export function listDailyStats(limit = 30) {
