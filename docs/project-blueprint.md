@@ -286,11 +286,11 @@ Definition de fini :
 
 ### Epic 5 - Historique et revue des sessions
 
-- [ ] Creer la liste des sessions avec pagination ou chargement incremental.
-- [ ] Ajouter filtres par date, duree, preset, statut et application.
-- [ ] Afficher le detail d'une session : segments, apps, interruptions, note eventuelle.
-- [ ] Permettre la suppression ou correction d'une session.
-- [ ] Ajouter export local CSV ou JSON.
+- [x] Creer la liste des sessions avec pagination ou chargement incremental.
+- [x] Ajouter filtres par date, duree, preset, statut et application.
+- [x] Afficher le detail d'une session : segments, apps, interruptions, note eventuelle.
+- [x] Permettre la suppression ou correction d'une session.
+- [x] Ajouter export local CSV ou JSON.
 
 Definition de fini :
 
