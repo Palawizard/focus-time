@@ -4,7 +4,7 @@ use focus_domain::{
     TrackedApp, TrackedWindowEvent, TrackingCategory, TrackingExclusionKind, TrackingExclusionRule,
     UserPreference,
 };
-use sqlx::{FromRow, SqlitePool};
+use sqlx::{FromRow, QueryBuilder, Sqlite, SqlitePool};
 
 use crate::PersistenceError;
 
@@ -60,6 +60,37 @@ pub struct UpdateSessionInput {
     pub status: SessionStatus,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct SessionHistoryFiltersInput {
+    pub date_from: Option<String>,
+    pub date_to: Option<String>,
+    pub min_duration_seconds: Option<i64>,
+    pub max_duration_seconds: Option<i64>,
+    pub preset_label: Option<String>,
+    pub status: Option<SessionStatus>,
+    pub tracked_app_id: Option<i64>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ListSessionsPageInput {
+    pub limit: Option<u32>,
+    pub offset: u32,
+    pub filters: SessionHistoryFiltersInput,
+}
+
+#[derive(Debug, Clone)]
+pub struct ReplaceSessionInput {
+    pub session_id: i64,
+    pub started_at: DateTime<Utc>,
+    pub ended_at: Option<DateTime<Utc>>,
+    pub planned_focus_minutes: i32,
+    pub actual_focus_seconds: i64,
+    pub break_seconds: i64,
+    pub status: SessionStatus,
+    pub preset_label: Option<String>,
+    pub note: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct CreateSessionSegmentInput {
     pub session_id: i64,
@@ -111,6 +142,20 @@ pub struct SaveDailyStatInput {
     pub completed_sessions: i32,
     pub interrupted_sessions: i32,
     pub top_app_id: Option<i64>,
+}
+
+#[derive(Debug, Clone)]
+pub struct SessionAppUsageSlice {
+    pub session_id: i64,
+    pub tracked_app_id: i64,
+    pub duration_seconds: i64,
+}
+
+#[derive(Debug, Clone)]
+pub struct SessionInterruptionSlice {
+    pub session_id: i64,
+    pub interruption_count: i64,
+    pub interruption_seconds: i64,
 }
 
 impl Repositories {
@@ -183,6 +228,52 @@ impl SessionRepository {
         .bind(i64::from(limit))
         .fetch_all(&self.pool)
         .await?;
+
+        rows.into_iter().map(SessionRow::try_into_domain).collect()
+    }
+
+    pub async fn list_filtered(
+        &self,
+        input: ListSessionsPageInput,
+    ) -> Result<Vec<Session>, PersistenceError> {
+        let mut query = QueryBuilder::<Sqlite>::new(
+            r#"
+            SELECT
+              id,
+              started_at,
+              ended_at,
+              planned_focus_minutes,
+              actual_focus_seconds,
+              break_seconds,
+              status,
+              preset_label,
+              note,
+              created_at,
+              updated_at
+            FROM sessions
+            WHERE 1 = 1
+            "#,
+        );
+
+        apply_session_history_filters(&mut query, &input.filters);
+        query.push(" ORDER BY started_at DESC");
+
+        if let Some(limit) = input.limit {
+            query
+                .push(" LIMIT ")
+                .push_bind(i64::from(limit))
+                .push(" OFFSET ")
+                .push_bind(i64::from(input.offset));
+        } else if input.offset > 0 {
+            query
+                .push(" LIMIT -1 OFFSET ")
+                .push_bind(i64::from(input.offset));
+        }
+
+        let rows = query
+            .build_query_as::<SessionRow>()
+            .fetch_all(&self.pool)
+            .await?;
 
         rows.into_iter().map(SessionRow::try_into_domain).collect()
     }
@@ -322,6 +413,156 @@ impl SessionRepository {
         .await?;
 
         self.get_by_id(input.session_id).await
+    }
+
+    pub async fn replace(&self, input: ReplaceSessionInput) -> Result<Session, PersistenceError> {
+        let result = sqlx::query(
+            r#"
+            UPDATE sessions
+            SET
+              started_at = ?,
+              ended_at = ?,
+              planned_focus_minutes = ?,
+              actual_focus_seconds = ?,
+              break_seconds = ?,
+              status = ?,
+              preset_label = ?,
+              note = ?,
+              updated_at = ?
+            WHERE id = ?
+            "#,
+        )
+        .bind(input.started_at.to_rfc3339())
+        .bind(input.ended_at.map(|value| value.to_rfc3339()))
+        .bind(input.planned_focus_minutes)
+        .bind(input.actual_focus_seconds)
+        .bind(input.break_seconds)
+        .bind(input.status.as_str())
+        .bind(input.preset_label)
+        .bind(input.note)
+        .bind(Utc::now().to_rfc3339())
+        .bind(input.session_id)
+        .execute(&self.pool)
+        .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(PersistenceError::NotFound(format!(
+                "session {}",
+                input.session_id
+            )));
+        }
+
+        self.get_by_id(input.session_id).await
+    }
+
+    pub async fn delete(&self, session_id: i64) -> Result<(), PersistenceError> {
+        let result = sqlx::query("DELETE FROM sessions WHERE id = ?")
+            .bind(session_id)
+            .execute(&self.pool)
+            .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(PersistenceError::NotFound(format!("session {session_id}")));
+        }
+
+        Ok(())
+    }
+
+    pub async fn list_app_usage(
+        &self,
+        session_ids: &[i64],
+    ) -> Result<Vec<SessionAppUsageSlice>, PersistenceError> {
+        if session_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut query = QueryBuilder::<Sqlite>::new(
+            r#"
+            SELECT
+              session_id,
+              tracked_app_id,
+              SUM(duration_seconds) AS duration_seconds
+            FROM session_segments
+            WHERE tracked_app_id IS NOT NULL
+              AND session_id IN (
+            "#,
+        );
+        {
+            let mut separated = query.separated(", ");
+
+            for session_id in session_ids {
+                separated.push_bind(session_id);
+            }
+        }
+        query.push(
+            r#"
+              )
+            GROUP BY session_id, tracked_app_id
+            ORDER BY session_id ASC, duration_seconds DESC
+            "#,
+        );
+
+        let rows = query
+            .build_query_as::<SessionAppUsageRow>()
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(rows
+            .into_iter()
+            .map(|row| SessionAppUsageSlice {
+                session_id: row.session_id,
+                tracked_app_id: row.tracked_app_id,
+                duration_seconds: row.duration_seconds,
+            })
+            .collect())
+    }
+
+    pub async fn list_interruptions(
+        &self,
+        session_ids: &[i64],
+    ) -> Result<Vec<SessionInterruptionSlice>, PersistenceError> {
+        if session_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut query = QueryBuilder::<Sqlite>::new(
+            r#"
+            SELECT
+              session_id,
+              SUM(CASE WHEN kind = 'idle' THEN 1 ELSE 0 END) AS interruption_count,
+              SUM(CASE WHEN kind = 'idle' THEN duration_seconds ELSE 0 END) AS interruption_seconds
+            FROM session_segments
+            WHERE session_id IN (
+            "#,
+        );
+        {
+            let mut separated = query.separated(", ");
+
+            for session_id in session_ids {
+                separated.push_bind(session_id);
+            }
+        }
+        query.push(
+            r#"
+            )
+            GROUP BY session_id
+            ORDER BY session_id ASC
+            "#,
+        );
+
+        let rows = query
+            .build_query_as::<SessionInterruptionRow>()
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(rows
+            .into_iter()
+            .map(|row| SessionInterruptionSlice {
+                session_id: row.session_id,
+                interruption_count: row.interruption_count,
+                interruption_seconds: row.interruption_seconds,
+            })
+            .collect())
     }
 }
 
@@ -730,6 +971,51 @@ impl TrackingRepository {
         row.try_into_domain()
     }
 
+    pub async fn list_window_events_for_session(
+        &self,
+        session_id: i64,
+    ) -> Result<Vec<TrackedWindowEvent>, PersistenceError> {
+        let rows = sqlx::query_as::<_, TrackedWindowEventRow>(
+            r#"
+            SELECT
+              tracked_window_events.id,
+              tracked_window_events.session_id,
+              tracked_window_events.tracked_app_id,
+              tracked_apps.name AS app_name,
+              tracked_apps.executable,
+              tracked_apps.category,
+              tracked_window_events.window_title,
+              tracked_window_events.started_at,
+              tracked_window_events.ended_at,
+              tracked_window_events.created_at
+            FROM tracked_window_events
+            LEFT JOIN tracked_apps
+              ON tracked_apps.id = tracked_window_events.tracked_app_id
+            WHERE tracked_window_events.session_id = ?
+            ORDER BY tracked_window_events.started_at ASC
+            "#,
+        )
+        .bind(session_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.into_iter()
+            .map(TrackedWindowEventRow::try_into_domain)
+            .collect()
+    }
+
+    pub async fn delete_window_events_for_session(
+        &self,
+        session_id: i64,
+    ) -> Result<(), PersistenceError> {
+        sqlx::query("DELETE FROM tracked_window_events WHERE session_id = ?")
+            .bind(session_id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
     pub async fn list_exclusion_rules(
         &self,
     ) -> Result<Vec<TrackingExclusionRule>, PersistenceError> {
@@ -867,6 +1153,20 @@ impl SessionSegmentRow {
             created_at: parse_datetime(&self.created_at)?,
         })
     }
+}
+
+#[derive(Debug, FromRow)]
+struct SessionAppUsageRow {
+    session_id: i64,
+    tracked_app_id: i64,
+    duration_seconds: i64,
+}
+
+#[derive(Debug, FromRow)]
+struct SessionInterruptionRow {
+    session_id: i64,
+    interruption_count: i64,
+    interruption_seconds: i64,
 }
 
 #[derive(Debug, FromRow)]
@@ -1071,5 +1371,49 @@ fn parse_tracking_exclusion_kind(value: &str) -> Result<TrackingExclusionKind, P
         "window_title" => Ok(TrackingExclusionKind::WindowTitle),
         "category" => Ok(TrackingExclusionKind::Category),
         _ => Err(PersistenceError::UnknownEnumValue(value.to_string())),
+    }
+}
+
+fn apply_session_history_filters(
+    query: &mut QueryBuilder<'_, Sqlite>,
+    filters: &SessionHistoryFiltersInput,
+) {
+    if let Some(date_from) = filters.date_from.clone() {
+        query
+            .push(" AND substr(started_at, 1, 10) >= ")
+            .push_bind(date_from);
+    }
+
+    if let Some(date_to) = filters.date_to.clone() {
+        query
+            .push(" AND substr(started_at, 1, 10) <= ")
+            .push_bind(date_to);
+    }
+
+    if let Some(min_duration_seconds) = filters.min_duration_seconds {
+        query
+            .push(" AND (actual_focus_seconds + break_seconds) >= ")
+            .push_bind(min_duration_seconds);
+    }
+
+    if let Some(max_duration_seconds) = filters.max_duration_seconds {
+        query
+            .push(" AND (actual_focus_seconds + break_seconds) <= ")
+            .push_bind(max_duration_seconds);
+    }
+
+    if let Some(preset_label) = filters.preset_label.clone() {
+        query.push(" AND preset_label = ").push_bind(preset_label);
+    }
+
+    if let Some(status) = filters.status {
+        query.push(" AND status = ").push_bind(status.as_str());
+    }
+
+    if let Some(tracked_app_id) = filters.tracked_app_id {
+        query.push(
+            " AND EXISTS (SELECT 1 FROM session_segments WHERE session_segments.session_id = sessions.id AND session_segments.tracked_app_id = ",
+        );
+        query.push_bind(tracked_app_id).push(")");
     }
 }

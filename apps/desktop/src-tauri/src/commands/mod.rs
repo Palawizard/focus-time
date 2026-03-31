@@ -8,9 +8,10 @@ pub use pomodoro::{
 };
 pub use runtime::get_runtime_health;
 pub use storage::{
-    create_session, create_session_segment, create_tracking_exclusion_rule,
-    delete_tracking_exclusion_rule, get_tracking_status, get_user_preferences, list_daily_stats,
+    create_session, create_session_segment, create_tracking_exclusion_rule, delete_session,
+    delete_tracking_exclusion_rule, export_history, get_history_session_detail,
+    get_tracking_status, get_user_preferences, list_daily_stats, list_history_sessions,
     list_session_segments, list_sessions, list_tracked_apps, list_tracked_window_events,
-    list_tracking_exclusion_rules, save_daily_stat, save_user_preferences,
+    list_tracking_exclusion_rules, replace_session, save_daily_stat, save_user_preferences,
     seed_development_fixtures, upsert_tracked_app,
 };

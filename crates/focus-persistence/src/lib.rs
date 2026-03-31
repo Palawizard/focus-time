@@ -13,9 +13,11 @@ pub use migrations::{
 };
 pub use repositories::{
     CreateSessionInput, CreateSessionSegmentInput, CreateTrackedWindowEventInput,
-    CreateTrackingExclusionRuleInput, DailyStatRepository, PreferencesRepository,
-    RegisterTrackedAppInput, Repositories, SaveDailyStatInput, SessionRepository,
-    TrackedAppRepository, TrackingRepository, UpdateSessionInput, UpsertTrackedAppInput,
+    CreateTrackingExclusionRuleInput, DailyStatRepository, ListSessionsPageInput,
+    PreferencesRepository, RegisterTrackedAppInput, ReplaceSessionInput, Repositories,
+    SaveDailyStatInput, SessionAppUsageSlice, SessionHistoryFiltersInput, SessionInterruptionSlice,
+    SessionRepository, TrackedAppRepository, TrackingRepository, UpdateSessionInput,
+    UpsertTrackedAppInput,
 };
 pub use schema::{initial_schema, DatabaseSchema, TableDefinition};
 pub use seed::{seed_development_data, DevelopmentSeedReport};
@@ -51,6 +53,8 @@ pub enum PersistenceError {
     InvalidDate(#[source] chrono::ParseError),
     #[error("unknown enum value: {0}")]
     UnknownEnumValue(String),
+    #[error("record not found: {0}")]
+    NotFound(String),
 }
 
 #[cfg(test)]

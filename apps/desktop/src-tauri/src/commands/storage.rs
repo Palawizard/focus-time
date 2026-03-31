@@ -7,8 +7,12 @@ use focus_domain::{
 use focus_persistence::DevelopmentSeedReport;
 use focus_persistence::UpsertTrackedAppInput;
 use serde::Deserialize;
+use tauri::Manager;
 
-use crate::services::TrackingRuntimeSnapshot;
+use crate::services::{
+    HistoryExportFormat, HistoryExportResult, HistoryFiltersInput, HistorySessionDetail,
+    HistorySessionsPage, ReplaceSessionDetailsInput, TrackingRuntimeSnapshot,
+};
 use crate::state::AppState;
 
 #[derive(Debug, Deserialize)]
@@ -76,6 +80,47 @@ pub struct SaveDailyStatRequest {
     pub top_app_id: Option<i64>,
 }
 
+#[derive(Debug, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionHistoryFiltersRequest {
+    pub date_from: Option<String>,
+    pub date_to: Option<String>,
+    pub min_duration_seconds: Option<i64>,
+    pub max_duration_seconds: Option<i64>,
+    pub preset_label: Option<String>,
+    pub status: Option<String>,
+    pub tracked_app_id: Option<i64>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListHistorySessionsRequest {
+    pub limit: Option<u32>,
+    pub offset: Option<u32>,
+    pub filters: Option<SessionHistoryFiltersRequest>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReplaceSessionRequest {
+    pub session_id: i64,
+    pub started_at: String,
+    pub ended_at: Option<String>,
+    pub planned_focus_minutes: i32,
+    pub actual_focus_seconds: i64,
+    pub break_seconds: i64,
+    pub status: String,
+    pub preset_label: Option<String>,
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportHistoryRequest {
+    pub format: String,
+    pub filters: Option<SessionHistoryFiltersRequest>,
+}
+
 #[tauri::command]
 pub async fn list_sessions(
     state: tauri::State<'_, AppState>,
@@ -133,6 +178,101 @@ pub async fn create_session_segment(
             ended_at: parse_utc_timestamp(&request.ended_at)?,
             duration_seconds: request.duration_seconds,
         })
+        .await
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn list_history_sessions(
+    state: tauri::State<'_, AppState>,
+    request: ListHistorySessionsRequest,
+) -> Result<HistorySessionsPage, String> {
+    state
+        .storage
+        .list_history_sessions(
+            request.limit.unwrap_or(20),
+            request.offset.unwrap_or_default(),
+            parse_history_filters(request.filters)?,
+        )
+        .await
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn get_history_session_detail(
+    state: tauri::State<'_, AppState>,
+    session_id: i64,
+) -> Result<HistorySessionDetail, String> {
+    state
+        .storage
+        .get_history_session_detail(session_id)
+        .await
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn replace_session(
+    state: tauri::State<'_, AppState>,
+    request: ReplaceSessionRequest,
+) -> Result<Session, String> {
+    state
+        .storage
+        .replace_session(ReplaceSessionDetailsInput {
+            session_id: request.session_id,
+            started_at: parse_utc_timestamp(&request.started_at)?,
+            ended_at: request
+                .ended_at
+                .as_deref()
+                .map(parse_utc_timestamp)
+                .transpose()?,
+            planned_focus_minutes: request.planned_focus_minutes,
+            actual_focus_seconds: request.actual_focus_seconds,
+            break_seconds: request.break_seconds,
+            status: parse_session_status(&request.status)?,
+            preset_label: request.preset_label,
+            note: request.note,
+        })
+        .await
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn delete_session(
+    state: tauri::State<'_, AppState>,
+    session_id: i64,
+) -> Result<(), String> {
+    state
+        .storage
+        .delete_session(session_id)
+        .await
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn export_history(
+    app_handle: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    request: ExportHistoryRequest,
+) -> Result<HistoryExportResult, String> {
+    let export_root = app_handle
+        .path()
+        .download_dir()
+        .or_else(|_| app_handle.path().document_dir())
+        .unwrap_or_else(|_| {
+            app_handle
+                .path()
+                .app_data_dir()
+                .expect("app data dir should resolve")
+        })
+        .join("focus-time-exports");
+
+    state
+        .storage
+        .export_history(
+            export_root,
+            parse_history_export_format(&request.format)?,
+            parse_history_filters(request.filters)?,
+        )
         .await
         .map_err(|error| error.to_string())
 }
@@ -361,6 +501,45 @@ fn parse_tracking_exclusion_kind(value: &str) -> Result<TrackingExclusionKind, S
         "window_title" => Ok(TrackingExclusionKind::WindowTitle),
         "category" => Ok(TrackingExclusionKind::Category),
         _ => Err(format!("unsupported exclusion kind: {value}")),
+    }
+}
+
+fn parse_history_filters(
+    filters: Option<SessionHistoryFiltersRequest>,
+) -> Result<HistoryFiltersInput, String> {
+    let filters = filters.unwrap_or_default();
+
+    if let Some(date_from) = &filters.date_from {
+        NaiveDate::parse_from_str(date_from, "%Y-%m-%d").map_err(|error| error.to_string())?;
+    }
+
+    if let Some(date_to) = &filters.date_to {
+        NaiveDate::parse_from_str(date_to, "%Y-%m-%d").map_err(|error| error.to_string())?;
+    }
+
+    Ok(HistoryFiltersInput {
+        date_from: filters.date_from,
+        date_to: filters.date_to,
+        min_duration_seconds: filters.min_duration_seconds,
+        max_duration_seconds: filters.max_duration_seconds,
+        preset_label: filters
+            .preset_label
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty()),
+        status: filters
+            .status
+            .as_deref()
+            .map(parse_session_status)
+            .transpose()?,
+        tracked_app_id: filters.tracked_app_id,
+    })
+}
+
+fn parse_history_export_format(value: &str) -> Result<HistoryExportFormat, String> {
+    match value {
+        "csv" => Ok(HistoryExportFormat::Csv),
+        "json" => Ok(HistoryExportFormat::Json),
+        _ => Err(format!("unsupported export format: {value}")),
     }
 }
 
