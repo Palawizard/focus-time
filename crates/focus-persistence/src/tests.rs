@@ -11,15 +11,15 @@ fn exposes_the_current_storage_profile() {
 
     assert_eq!(profile.engine, "sqlite");
     assert_eq!(profile.mode, "sqlite");
-    assert_eq!(profile.schema_version, 1);
+    assert_eq!(profile.schema_version, 3);
 }
 
 #[test]
 fn exposes_the_initial_schema_definition() {
     let schema = crate::initial_schema();
 
-    assert_eq!(schema.version, 1);
-    assert_eq!(schema.tables.len(), 7);
+    assert_eq!(schema.version, 3);
+    assert_eq!(schema.tables.len(), 8);
 }
 
 #[tokio::test]
@@ -34,12 +34,12 @@ async fn migrates_an_empty_database() {
         .await
         .expect("migrations should run on an empty database");
 
-    assert_eq!(applied.len(), 2);
+    assert_eq!(applied.len(), 3);
 
     let applied_versions = list_applied_migrations(&pool)
         .await
         .expect("migration history should be readable");
-    assert_eq!(applied_versions.len(), 2);
+    assert_eq!(applied_versions.len(), 3);
 
     let preferences_count = sqlx::query_scalar::<_, i64>("SELECT COUNT(1) FROM user_preferences")
         .fetch_one(&pool)
@@ -82,5 +82,5 @@ async fn preserves_existing_data_when_migrations_run_again() {
     let applied_versions = list_applied_migrations(&second_pool)
         .await
         .expect("migration history should still be available");
-    assert_eq!(applied_versions.len(), 2);
+    assert_eq!(applied_versions.len(), 3);
 }

@@ -79,6 +79,54 @@ impl ThemePreference {
     }
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum TrackingCategory {
+    Development,
+    Browser,
+    Communication,
+    Writing,
+    Design,
+    Meeting,
+    Research,
+    Utilities,
+    Unknown,
+}
+
+impl TrackingCategory {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Development => "development",
+            Self::Browser => "browser",
+            Self::Communication => "communication",
+            Self::Writing => "writing",
+            Self::Design => "design",
+            Self::Meeting => "meeting",
+            Self::Research => "research",
+            Self::Utilities => "utilities",
+            Self::Unknown => "unknown",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum TrackingExclusionKind {
+    Executable,
+    WindowTitle,
+    Category,
+}
+
+impl TrackingExclusionKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Executable => "executable",
+            Self::WindowTitle => "window_title",
+            Self::Category => "category",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Session {
@@ -115,6 +163,7 @@ pub struct TrackedApp {
     pub id: i64,
     pub name: String,
     pub executable: String,
+    pub category: TrackingCategory,
     pub color_hex: Option<String>,
     pub is_excluded: bool,
     pub created_at: DateTime<Utc>,
@@ -127,10 +176,23 @@ pub struct TrackedWindowEvent {
     pub id: i64,
     pub session_id: Option<i64>,
     pub tracked_app_id: Option<i64>,
+    pub app_name: Option<String>,
+    pub executable: Option<String>,
+    pub category: Option<TrackingCategory>,
     pub window_title: Option<String>,
     pub started_at: DateTime<Utc>,
     pub ended_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TrackingExclusionRule {
+    pub id: i64,
+    pub kind: TrackingExclusionKind,
+    pub pattern: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -165,6 +227,8 @@ pub struct UserPreference {
     pub auto_start_breaks: bool,
     pub auto_start_focus: bool,
     pub tracking_enabled: bool,
+    pub tracking_permission_granted: bool,
+    pub tracking_onboarding_completed: bool,
     pub notifications_enabled: bool,
     pub theme: ThemePreference,
     pub updated_at: DateTime<Utc>,
@@ -180,6 +244,8 @@ impl Default for UserPreference {
             auto_start_breaks: false,
             auto_start_focus: false,
             tracking_enabled: true,
+            tracking_permission_granted: false,
+            tracking_onboarding_completed: false,
             notifications_enabled: true,
             theme: ThemePreference::System,
             updated_at: Utc::now(),

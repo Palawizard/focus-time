@@ -46,6 +46,8 @@ pub async fn seed_development_data(
           auto_start_breaks = 0,
           auto_start_focus = 0,
           tracking_enabled = 1,
+          tracking_permission_granted = 1,
+          tracking_onboarding_completed = 1,
           notifications_enabled = 1,
           theme = 'system',
           updated_at = ?
@@ -60,6 +62,7 @@ pub async fn seed_development_data(
         &mut *connection,
         "Visual Studio Code",
         "Code.exe",
+        "development",
         Some("#0078d4"),
         false,
         &app_now,
@@ -69,6 +72,7 @@ pub async fn seed_development_data(
         &mut *connection,
         "Arc",
         "Arc.exe",
+        "browser",
         Some("#60b7ff"),
         false,
         &app_now,
@@ -195,16 +199,26 @@ async fn upsert_tracked_app(
     connection: &mut sqlx::SqliteConnection,
     name: &str,
     executable: &str,
+    category: &str,
     color_hex: Option<&str>,
     is_excluded: bool,
     timestamp: &str,
 ) -> Result<i64, PersistenceError> {
     sqlx::query(
         r#"
-        INSERT INTO tracked_apps (name, executable, color_hex, is_excluded, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO tracked_apps (
+          name,
+          executable,
+          category,
+          color_hex,
+          is_excluded,
+          created_at,
+          updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(executable) DO UPDATE SET
           name = excluded.name,
+          category = excluded.category,
           color_hex = excluded.color_hex,
           is_excluded = excluded.is_excluded,
           updated_at = excluded.updated_at
@@ -212,6 +226,7 @@ async fn upsert_tracked_app(
     )
     .bind(name)
     .bind(executable)
+    .bind(category)
     .bind(color_hex)
     .bind(is_excluded)
     .bind(timestamp)

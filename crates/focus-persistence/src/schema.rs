@@ -14,7 +14,7 @@ pub struct DatabaseSchema {
 
 pub fn initial_schema() -> DatabaseSchema {
     DatabaseSchema {
-        version: 1,
+        version: 3,
         tables: vec![
             TableDefinition {
                 name: "sessions",
@@ -31,6 +31,10 @@ pub fn initial_schema() -> DatabaseSchema {
             TableDefinition {
                 name: "tracked_window_events",
                 purpose: "Stores raw window activity events for tracking adapters.",
+            },
+            TableDefinition {
+                name: "tracking_exclusion_rules",
+                purpose: "Stores explicit user-managed exclusion rules for tracking.",
             },
             TableDefinition {
                 name: "daily_stats",

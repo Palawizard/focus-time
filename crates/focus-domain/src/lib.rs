@@ -3,7 +3,8 @@ mod pomodoro;
 
 pub use models::{
     Achievement, DailyStat, PomodoroPreset, Session, SessionSegment, SessionSegmentKind,
-    SessionStatus, ThemePreference, TrackedApp, TrackedWindowEvent, UserPreference,
+    SessionStatus, ThemePreference, TrackedApp, TrackedWindowEvent, TrackingCategory,
+    TrackingExclusionKind, TrackingExclusionRule, UserPreference,
 };
 pub use pomodoro::{
     recommended_presets, PomodoroControlState, PomodoroPhase, PomodoroSessionOutcome,

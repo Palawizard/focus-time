@@ -5,6 +5,8 @@ const MIGRATION_0001: &str =
     include_str!("../../../apps/desktop/src-tauri/migrations/0001_initial_schema.sql");
 const MIGRATION_0002: &str =
     include_str!("../../../apps/desktop/src-tauri/migrations/0002_supporting_indexes.sql");
+const MIGRATION_0003: &str =
+    include_str!("../../../apps/desktop/src-tauri/migrations/0003_tracking_foundation.sql");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MigrationDefinition {
@@ -25,7 +27,7 @@ pub enum MigrationError {
     Database(#[from] sqlx::Error),
 }
 
-const MIGRATIONS: [MigrationDefinition; 2] = [
+const MIGRATIONS: [MigrationDefinition; 3] = [
     MigrationDefinition {
         version: 1,
         name: "initial_schema",
@@ -35,6 +37,11 @@ const MIGRATIONS: [MigrationDefinition; 2] = [
         version: 2,
         name: "supporting_indexes",
         sql: MIGRATION_0002,
+    },
+    MigrationDefinition {
+        version: 3,
+        name: "tracking_foundation",
+        sql: MIGRATION_0003,
     },
 ];
 

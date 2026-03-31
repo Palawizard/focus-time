@@ -1,7 +1,8 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use focus_domain::{
     DailyStat, Session, SessionSegment, SessionSegmentKind, SessionStatus, ThemePreference,
-    TrackedApp, UserPreference,
+    TrackedApp, TrackedWindowEvent, TrackingCategory, TrackingExclusionKind, TrackingExclusionRule,
+    UserPreference,
 };
 use sqlx::{FromRow, SqlitePool};
 
@@ -28,11 +29,17 @@ pub struct DailyStatRepository {
 }
 
 #[derive(Debug, Clone)]
+pub struct TrackingRepository {
+    pool: SqlitePool,
+}
+
+#[derive(Debug, Clone)]
 pub struct Repositories {
     pub sessions: SessionRepository,
     pub preferences: PreferencesRepository,
     pub tracked_apps: TrackedAppRepository,
     pub daily_stats: DailyStatRepository,
+    pub tracking: TrackingRepository,
 }
 
 #[derive(Debug, Clone)]
@@ -68,8 +75,32 @@ pub struct CreateSessionSegmentInput {
 pub struct UpsertTrackedAppInput {
     pub name: String,
     pub executable: String,
+    pub category: TrackingCategory,
     pub color_hex: Option<String>,
     pub is_excluded: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct RegisterTrackedAppInput {
+    pub name: String,
+    pub executable: String,
+    pub category: TrackingCategory,
+    pub color_hex: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CreateTrackedWindowEventInput {
+    pub session_id: Option<i64>,
+    pub tracked_app_id: Option<i64>,
+    pub window_title: Option<String>,
+    pub started_at: DateTime<Utc>,
+    pub ended_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CreateTrackingExclusionRuleInput {
+    pub kind: TrackingExclusionKind,
+    pub pattern: String,
 }
 
 #[derive(Debug, Clone)]
@@ -88,6 +119,7 @@ impl Repositories {
             sessions: SessionRepository::new(pool.clone()),
             preferences: PreferencesRepository::new(pool.clone()),
             tracked_apps: TrackedAppRepository::new(pool.clone()),
+            tracking: TrackingRepository::new(pool.clone()),
             daily_stats: DailyStatRepository::new(pool),
         }
     }
@@ -309,6 +341,8 @@ impl PreferencesRepository {
               auto_start_breaks,
               auto_start_focus,
               tracking_enabled,
+              tracking_permission_granted,
+              tracking_onboarding_completed,
               notifications_enabled,
               theme,
               updated_at
@@ -337,6 +371,8 @@ impl PreferencesRepository {
               auto_start_breaks = ?,
               auto_start_focus = ?,
               tracking_enabled = ?,
+              tracking_permission_granted = ?,
+              tracking_onboarding_completed = ?,
               notifications_enabled = ?,
               theme = ?,
               updated_at = ?
@@ -350,6 +386,8 @@ impl PreferencesRepository {
         .bind(preferences.auto_start_breaks)
         .bind(preferences.auto_start_focus)
         .bind(preferences.tracking_enabled)
+        .bind(preferences.tracking_permission_granted)
+        .bind(preferences.tracking_onboarding_completed)
         .bind(preferences.notifications_enabled)
         .bind(preferences.theme.as_str())
         .bind(Utc::now().to_rfc3339())
@@ -372,6 +410,7 @@ impl TrackedAppRepository {
               id,
               name,
               executable,
+              category,
               color_hex,
               is_excluded,
               created_at,
@@ -396,10 +435,19 @@ impl TrackedAppRepository {
 
         sqlx::query(
             r#"
-            INSERT INTO tracked_apps (name, executable, color_hex, is_excluded, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO tracked_apps (
+              name,
+              executable,
+              category,
+              color_hex,
+              is_excluded,
+              created_at,
+              updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(executable) DO UPDATE SET
               name = excluded.name,
+              category = excluded.category,
               color_hex = excluded.color_hex,
               is_excluded = excluded.is_excluded,
               updated_at = excluded.updated_at
@@ -407,6 +455,7 @@ impl TrackedAppRepository {
         )
         .bind(input.name)
         .bind(input.executable.clone())
+        .bind(input.category.as_str())
         .bind(input.color_hex)
         .bind(input.is_excluded)
         .bind(now.clone())
@@ -420,6 +469,7 @@ impl TrackedAppRepository {
               id,
               name,
               executable,
+              category,
               color_hex,
               is_excluded,
               created_at,
@@ -433,6 +483,71 @@ impl TrackedAppRepository {
         .await?;
 
         row.try_into_domain()
+    }
+
+    pub async fn find_by_executable(
+        &self,
+        executable: &str,
+    ) -> Result<Option<TrackedApp>, PersistenceError> {
+        let row = sqlx::query_as::<_, TrackedAppRow>(
+            r#"
+            SELECT
+              id,
+              name,
+              executable,
+              category,
+              color_hex,
+              is_excluded,
+              created_at,
+              updated_at
+            FROM tracked_apps
+            WHERE executable = ?
+            "#,
+        )
+        .bind(executable)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        row.map(TrackedAppRow::try_into_domain).transpose()
+    }
+
+    pub async fn register_seen(
+        &self,
+        input: RegisterTrackedAppInput,
+    ) -> Result<TrackedApp, PersistenceError> {
+        let now = Utc::now().to_rfc3339();
+
+        sqlx::query(
+            r#"
+            INSERT INTO tracked_apps (
+              name,
+              executable,
+              category,
+              color_hex,
+              is_excluded,
+              created_at,
+              updated_at
+            )
+            VALUES (?, ?, ?, ?, 0, ?, ?)
+            ON CONFLICT(executable) DO UPDATE SET
+              name = excluded.name,
+              category = excluded.category,
+              color_hex = COALESCE(tracked_apps.color_hex, excluded.color_hex),
+              updated_at = excluded.updated_at
+            "#,
+        )
+        .bind(input.name)
+        .bind(input.executable.clone())
+        .bind(input.category.as_str())
+        .bind(input.color_hex)
+        .bind(now.clone())
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+
+        self.find_by_executable(&input.executable)
+            .await?
+            .ok_or_else(|| PersistenceError::UnknownEnumValue("tracked app missing".to_string()))
     }
 }
 
@@ -522,6 +637,173 @@ impl DailyStatRepository {
     }
 }
 
+impl TrackingRepository {
+    pub fn new(pool: SqlitePool) -> Self {
+        Self { pool }
+    }
+
+    pub async fn list_window_events(
+        &self,
+        limit: u32,
+    ) -> Result<Vec<TrackedWindowEvent>, PersistenceError> {
+        let rows = sqlx::query_as::<_, TrackedWindowEventRow>(
+            r#"
+            SELECT
+              tracked_window_events.id,
+              tracked_window_events.session_id,
+              tracked_window_events.tracked_app_id,
+              tracked_apps.name AS app_name,
+              tracked_apps.executable,
+              tracked_apps.category,
+              tracked_window_events.window_title,
+              tracked_window_events.started_at,
+              tracked_window_events.ended_at,
+              tracked_window_events.created_at
+            FROM tracked_window_events
+            LEFT JOIN tracked_apps
+              ON tracked_apps.id = tracked_window_events.tracked_app_id
+            ORDER BY tracked_window_events.started_at DESC
+            LIMIT ?
+            "#,
+        )
+        .bind(i64::from(limit))
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.into_iter()
+            .map(TrackedWindowEventRow::try_into_domain)
+            .collect()
+    }
+
+    pub async fn create_window_event(
+        &self,
+        input: CreateTrackedWindowEventInput,
+    ) -> Result<TrackedWindowEvent, PersistenceError> {
+        let created_at = Utc::now().to_rfc3339();
+
+        let event_id = sqlx::query_scalar::<_, i64>(
+            r#"
+            INSERT INTO tracked_window_events (
+              session_id,
+              tracked_app_id,
+              window_title,
+              started_at,
+              ended_at,
+              created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            RETURNING id
+            "#,
+        )
+        .bind(input.session_id)
+        .bind(input.tracked_app_id)
+        .bind(input.window_title)
+        .bind(input.started_at.to_rfc3339())
+        .bind(input.ended_at.map(|value| value.to_rfc3339()))
+        .bind(created_at)
+        .fetch_one(&self.pool)
+        .await?;
+
+        let row = sqlx::query_as::<_, TrackedWindowEventRow>(
+            r#"
+            SELECT
+              tracked_window_events.id,
+              tracked_window_events.session_id,
+              tracked_window_events.tracked_app_id,
+              tracked_apps.name AS app_name,
+              tracked_apps.executable,
+              tracked_apps.category,
+              tracked_window_events.window_title,
+              tracked_window_events.started_at,
+              tracked_window_events.ended_at,
+              tracked_window_events.created_at
+            FROM tracked_window_events
+            LEFT JOIN tracked_apps
+              ON tracked_apps.id = tracked_window_events.tracked_app_id
+            WHERE tracked_window_events.id = ?
+            "#,
+        )
+        .bind(event_id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        row.try_into_domain()
+    }
+
+    pub async fn list_exclusion_rules(
+        &self,
+    ) -> Result<Vec<TrackingExclusionRule>, PersistenceError> {
+        let rows = sqlx::query_as::<_, TrackingExclusionRuleRow>(
+            r#"
+            SELECT
+              id,
+              kind,
+              pattern,
+              created_at,
+              updated_at
+            FROM tracking_exclusion_rules
+            ORDER BY updated_at DESC, id DESC
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.into_iter()
+            .map(TrackingExclusionRuleRow::try_into_domain)
+            .collect()
+    }
+
+    pub async fn create_exclusion_rule(
+        &self,
+        input: CreateTrackingExclusionRuleInput,
+    ) -> Result<TrackingExclusionRule, PersistenceError> {
+        let now = Utc::now().to_rfc3339();
+
+        sqlx::query(
+            r#"
+            INSERT INTO tracking_exclusion_rules (kind, pattern, created_at, updated_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(kind, pattern) DO UPDATE SET
+              updated_at = excluded.updated_at
+            "#,
+        )
+        .bind(input.kind.as_str())
+        .bind(input.pattern.clone())
+        .bind(now.clone())
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+
+        let row = sqlx::query_as::<_, TrackingExclusionRuleRow>(
+            r#"
+            SELECT
+              id,
+              kind,
+              pattern,
+              created_at,
+              updated_at
+            FROM tracking_exclusion_rules
+            WHERE kind = ? AND pattern = ?
+            "#,
+        )
+        .bind(input.kind.as_str())
+        .bind(input.pattern)
+        .fetch_one(&self.pool)
+        .await?;
+
+        row.try_into_domain()
+    }
+
+    pub async fn delete_exclusion_rule(&self, rule_id: i64) -> Result<(), PersistenceError> {
+        sqlx::query("DELETE FROM tracking_exclusion_rules WHERE id = ?")
+            .bind(rule_id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+}
+
 #[derive(Debug, FromRow)]
 struct SessionRow {
     id: i64,
@@ -592,6 +874,7 @@ struct TrackedAppRow {
     id: i64,
     name: String,
     executable: String,
+    category: String,
     color_hex: Option<String>,
     is_excluded: bool,
     created_at: String,
@@ -604,8 +887,68 @@ impl TrackedAppRow {
             id: self.id,
             name: self.name,
             executable: self.executable,
+            category: parse_tracking_category(&self.category)?,
             color_hex: self.color_hex,
             is_excluded: self.is_excluded,
+            created_at: parse_datetime(&self.created_at)?,
+            updated_at: parse_datetime(&self.updated_at)?,
+        })
+    }
+}
+
+#[derive(Debug, FromRow)]
+struct TrackedWindowEventRow {
+    id: i64,
+    session_id: Option<i64>,
+    tracked_app_id: Option<i64>,
+    app_name: Option<String>,
+    executable: Option<String>,
+    category: Option<String>,
+    window_title: Option<String>,
+    started_at: String,
+    ended_at: Option<String>,
+    created_at: String,
+}
+
+impl TrackedWindowEventRow {
+    fn try_into_domain(self) -> Result<TrackedWindowEvent, PersistenceError> {
+        Ok(TrackedWindowEvent {
+            id: self.id,
+            session_id: self.session_id,
+            tracked_app_id: self.tracked_app_id,
+            app_name: self.app_name,
+            executable: self.executable,
+            category: self
+                .category
+                .as_deref()
+                .map(parse_tracking_category)
+                .transpose()?,
+            window_title: self.window_title,
+            started_at: parse_datetime(&self.started_at)?,
+            ended_at: self
+                .ended_at
+                .map(|value| parse_datetime(&value))
+                .transpose()?,
+            created_at: parse_datetime(&self.created_at)?,
+        })
+    }
+}
+
+#[derive(Debug, FromRow)]
+struct TrackingExclusionRuleRow {
+    id: i64,
+    kind: String,
+    pattern: String,
+    created_at: String,
+    updated_at: String,
+}
+
+impl TrackingExclusionRuleRow {
+    fn try_into_domain(self) -> Result<TrackingExclusionRule, PersistenceError> {
+        Ok(TrackingExclusionRule {
+            id: self.id,
+            kind: parse_tracking_exclusion_kind(&self.kind)?,
+            pattern: self.pattern,
             created_at: parse_datetime(&self.created_at)?,
             updated_at: parse_datetime(&self.updated_at)?,
         })
@@ -647,6 +990,8 @@ struct UserPreferenceRow {
     auto_start_breaks: bool,
     auto_start_focus: bool,
     tracking_enabled: bool,
+    tracking_permission_granted: bool,
+    tracking_onboarding_completed: bool,
     notifications_enabled: bool,
     theme: String,
     updated_at: String,
@@ -662,6 +1007,8 @@ impl UserPreferenceRow {
             auto_start_breaks: self.auto_start_breaks,
             auto_start_focus: self.auto_start_focus,
             tracking_enabled: self.tracking_enabled,
+            tracking_permission_granted: self.tracking_permission_granted,
+            tracking_onboarding_completed: self.tracking_onboarding_completed,
             notifications_enabled: self.notifications_enabled,
             theme: parse_theme_preference(&self.theme)?,
             updated_at: parse_datetime(&self.updated_at)?,
@@ -699,6 +1046,30 @@ fn parse_theme_preference(value: &str) -> Result<ThemePreference, PersistenceErr
         "system" => Ok(ThemePreference::System),
         "light" => Ok(ThemePreference::Light),
         "dark" => Ok(ThemePreference::Dark),
+        _ => Err(PersistenceError::UnknownEnumValue(value.to_string())),
+    }
+}
+
+fn parse_tracking_category(value: &str) -> Result<TrackingCategory, PersistenceError> {
+    match value {
+        "development" => Ok(TrackingCategory::Development),
+        "browser" => Ok(TrackingCategory::Browser),
+        "communication" => Ok(TrackingCategory::Communication),
+        "writing" => Ok(TrackingCategory::Writing),
+        "design" => Ok(TrackingCategory::Design),
+        "meeting" => Ok(TrackingCategory::Meeting),
+        "research" => Ok(TrackingCategory::Research),
+        "utilities" => Ok(TrackingCategory::Utilities),
+        "unknown" => Ok(TrackingCategory::Unknown),
+        _ => Err(PersistenceError::UnknownEnumValue(value.to_string())),
+    }
+}
+
+fn parse_tracking_exclusion_kind(value: &str) -> Result<TrackingExclusionKind, PersistenceError> {
+    match value {
+        "executable" => Ok(TrackingExclusionKind::Executable),
+        "window_title" => Ok(TrackingExclusionKind::WindowTitle),
+        "category" => Ok(TrackingExclusionKind::Category),
         _ => Err(PersistenceError::UnknownEnumValue(value.to_string())),
     }
 }

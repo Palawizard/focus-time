@@ -942,6 +942,13 @@ dependencies = [
 [[package]]
 name = "focus-tracking"
 version = "0.1.0"
+dependencies = [
+ "focus-domain",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "windows-sys 0.59.0",
+]
 
 [[package]]
 name = "foldhash"
