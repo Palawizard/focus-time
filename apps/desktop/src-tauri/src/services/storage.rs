@@ -2,10 +2,14 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use chrono::{NaiveDate, Utc};
-use focus_domain::{DailyStat, Session, SessionSegment, SessionStatus, TrackedApp, UserPreference};
+use focus_domain::{
+    DailyStat, Session, SessionSegment, SessionStatus, TrackedApp, TrackedWindowEvent,
+    TrackingCategory, TrackingExclusionKind, TrackingExclusionRule, UserPreference,
+};
 use focus_persistence::{
     connect_database, run_migrations, seed_development_data, CreateSessionInput,
-    CreateSessionSegmentInput, DevelopmentSeedReport, Repositories, SaveDailyStatInput,
+    CreateSessionSegmentInput, CreateTrackedWindowEventInput, CreateTrackingExclusionRuleInput,
+    DevelopmentSeedReport, RegisterTrackedAppInput, Repositories, SaveDailyStatInput,
     UpdateSessionInput, UpsertTrackedAppInput,
 };
 use sqlx::SqlitePool;
@@ -130,6 +134,87 @@ impl StorageService {
         self.repositories
             .tracked_apps
             .upsert(input)
+            .await
+            .map_err(Into::into)
+    }
+
+    pub async fn register_seen_tracked_app(
+        &self,
+        name: String,
+        executable: String,
+        category: TrackingCategory,
+        color_hex: Option<String>,
+    ) -> anyhow::Result<TrackedApp> {
+        self.repositories
+            .tracked_apps
+            .register_seen(RegisterTrackedAppInput {
+                name,
+                executable,
+                category,
+                color_hex,
+            })
+            .await
+            .map_err(Into::into)
+    }
+
+    pub async fn list_tracked_window_events(
+        &self,
+        limit: u32,
+    ) -> anyhow::Result<Vec<TrackedWindowEvent>> {
+        self.repositories
+            .tracking
+            .list_window_events(limit)
+            .await
+            .map_err(Into::into)
+    }
+
+    pub async fn create_tracked_window_event(
+        &self,
+        session_id: Option<i64>,
+        tracked_app_id: Option<i64>,
+        window_title: Option<String>,
+        started_at: chrono::DateTime<Utc>,
+        ended_at: Option<chrono::DateTime<Utc>>,
+    ) -> anyhow::Result<TrackedWindowEvent> {
+        self.repositories
+            .tracking
+            .create_window_event(CreateTrackedWindowEventInput {
+                session_id,
+                tracked_app_id,
+                window_title,
+                started_at,
+                ended_at,
+            })
+            .await
+            .map_err(Into::into)
+    }
+
+    pub async fn list_tracking_exclusion_rules(
+        &self,
+    ) -> anyhow::Result<Vec<TrackingExclusionRule>> {
+        self.repositories
+            .tracking
+            .list_exclusion_rules()
+            .await
+            .map_err(Into::into)
+    }
+
+    pub async fn create_tracking_exclusion_rule(
+        &self,
+        kind: TrackingExclusionKind,
+        pattern: String,
+    ) -> anyhow::Result<TrackingExclusionRule> {
+        self.repositories
+            .tracking
+            .create_exclusion_rule(CreateTrackingExclusionRuleInput { kind, pattern })
+            .await
+            .map_err(Into::into)
+    }
+
+    pub async fn delete_tracking_exclusion_rule(&self, rule_id: i64) -> anyhow::Result<()> {
+        self.repositories
+            .tracking
+            .delete_exclusion_rule(rule_id)
             .await
             .map_err(Into::into)
     }

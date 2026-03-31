@@ -13,7 +13,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 use tokio::{sync::Mutex, time};
 
-use super::StorageService;
+use super::{StorageService, TrackingService};
 
 const STATE_EVENT: &str = "pomodoro://state";
 const TRANSITION_EVENT: &str = "pomodoro://transition";
@@ -22,6 +22,7 @@ const TRANSITION_EVENT: &str = "pomodoro://transition";
 pub struct PomodoroService {
     runtime: Arc<Mutex<PomodoroRuntime>>,
     storage: StorageService,
+    tracker: TrackingService,
 }
 
 #[derive(Debug, Clone)]
@@ -77,11 +78,20 @@ struct PomodoroUpdate {
 }
 
 impl PomodoroService {
-    pub fn new(app_handle: AppHandle, storage: StorageService) -> Self {
+    pub fn new(app_handle: AppHandle, storage: StorageService, tracker: TrackingService) -> Self {
         let runtime = Arc::new(Mutex::new(PomodoroRuntime::new()));
-        spawn_pomodoro_loop(app_handle, runtime.clone(), storage.clone());
+        spawn_pomodoro_loop(
+            app_handle,
+            runtime.clone(),
+            storage.clone(),
+            tracker.clone(),
+        );
 
-        Self { runtime, storage }
+        Self {
+            runtime,
+            storage,
+            tracker,
+        }
     }
 
     pub async fn get_state(&self) -> PomodoroSnapshot {
@@ -180,6 +190,7 @@ impl PomodoroService {
                 attach_next_session_id(&self.storage, &self.runtime, &update.state.preset).await?;
         }
 
+        self.tracker.sync_pomodoro_state(update.state.clone()).await;
         emit_transition(app_handle, &update.transition)?;
         emit_state(app_handle, &update.state)?;
 
@@ -700,6 +711,7 @@ fn spawn_pomodoro_loop(
     app_handle: AppHandle,
     runtime: Arc<Mutex<PomodoroRuntime>>,
     storage: StorageService,
+    tracker: TrackingService,
 ) {
     tauri::async_runtime::spawn(async move {
         let mut interval = time::interval(Duration::from_millis(250));
@@ -747,11 +759,15 @@ fn spawn_pomodoro_loop(
                     }
                 }
 
+                tracker.sync_pomodoro_state(current_state.clone()).await;
                 if emit_transition(&app_handle, &update.transition).is_err() {
                     break;
                 }
             }
 
+            if tick_result.0 {
+                tracker.sync_pomodoro_state(current_state.clone()).await;
+            }
             if tick_result.0 && emit_state(&app_handle, &current_state).is_err() {
                 break;
             }

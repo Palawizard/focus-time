@@ -1,12 +1,14 @@
 use chrono::NaiveDate;
 use focus_domain::{
     DailyStat, Session, SessionSegment, SessionSegmentKind, SessionStatus, TrackedApp,
+    TrackedWindowEvent, TrackingCategory, TrackingExclusionKind, TrackingExclusionRule,
     UserPreference,
 };
 use focus_persistence::DevelopmentSeedReport;
 use focus_persistence::UpsertTrackedAppInput;
 use serde::Deserialize;
 
+use crate::services::TrackingRuntimeSnapshot;
 use crate::state::AppState;
 
 #[derive(Debug, Deserialize)]
@@ -40,6 +42,8 @@ pub struct SaveUserPreferencesRequest {
     pub auto_start_breaks: bool,
     pub auto_start_focus: bool,
     pub tracking_enabled: bool,
+    pub tracking_permission_granted: bool,
+    pub tracking_onboarding_completed: bool,
     pub notifications_enabled: bool,
     pub theme: String,
 }
@@ -49,8 +53,16 @@ pub struct SaveUserPreferencesRequest {
 pub struct UpsertTrackedAppRequest {
     pub name: String,
     pub executable: String,
+    pub category: String,
     pub color_hex: Option<String>,
     pub is_excluded: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateTrackingExclusionRuleRequest {
+    pub kind: String,
+    pub pattern: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -155,6 +167,8 @@ pub async fn save_user_preferences(
         auto_start_breaks: request.auto_start_breaks,
         auto_start_focus: request.auto_start_focus,
         tracking_enabled: request.tracking_enabled,
+        tracking_permission_granted: request.tracking_permission_granted,
+        tracking_onboarding_completed: request.tracking_onboarding_completed,
         notifications_enabled: request.notifications_enabled,
         theme: parse_theme(&request.theme)?,
         updated_at: current.updated_at,
@@ -188,9 +202,67 @@ pub async fn upsert_tracked_app(
         .upsert_tracked_app(UpsertTrackedAppInput {
             name: request.name,
             executable: request.executable,
+            category: parse_tracking_category(&request.category)?,
             color_hex: request.color_hex,
             is_excluded: request.is_excluded,
         })
+        .await
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn get_tracking_status(
+    state: tauri::State<'_, AppState>,
+) -> Result<TrackingRuntimeSnapshot, String> {
+    Ok(state.tracker.get_status().await)
+}
+
+#[tauri::command]
+pub async fn list_tracked_window_events(
+    state: tauri::State<'_, AppState>,
+    limit: Option<u32>,
+) -> Result<Vec<TrackedWindowEvent>, String> {
+    state
+        .tracker
+        .list_recent_events(limit.unwrap_or(30))
+        .await
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn list_tracking_exclusion_rules(
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<TrackingExclusionRule>, String> {
+    state
+        .tracker
+        .list_exclusion_rules()
+        .await
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn create_tracking_exclusion_rule(
+    state: tauri::State<'_, AppState>,
+    request: CreateTrackingExclusionRuleRequest,
+) -> Result<TrackingExclusionRule, String> {
+    state
+        .tracker
+        .create_exclusion_rule(
+            parse_tracking_exclusion_kind(&request.kind)?,
+            request.pattern,
+        )
+        .await
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn delete_tracking_exclusion_rule(
+    state: tauri::State<'_, AppState>,
+    rule_id: i64,
+) -> Result<(), String> {
+    state
+        .tracker
+        .delete_exclusion_rule(rule_id)
         .await
         .map_err(|error| error.to_string())
 }
@@ -265,6 +337,30 @@ fn parse_theme(value: &str) -> Result<focus_domain::ThemePreference, String> {
         "light" => Ok(focus_domain::ThemePreference::Light),
         "dark" => Ok(focus_domain::ThemePreference::Dark),
         _ => Err(format!("unsupported theme: {value}")),
+    }
+}
+
+fn parse_tracking_category(value: &str) -> Result<TrackingCategory, String> {
+    match value {
+        "development" => Ok(TrackingCategory::Development),
+        "browser" => Ok(TrackingCategory::Browser),
+        "communication" => Ok(TrackingCategory::Communication),
+        "writing" => Ok(TrackingCategory::Writing),
+        "design" => Ok(TrackingCategory::Design),
+        "meeting" => Ok(TrackingCategory::Meeting),
+        "research" => Ok(TrackingCategory::Research),
+        "utilities" => Ok(TrackingCategory::Utilities),
+        "unknown" => Ok(TrackingCategory::Unknown),
+        _ => Err(format!("unsupported tracking category: {value}")),
+    }
+}
+
+fn parse_tracking_exclusion_kind(value: &str) -> Result<TrackingExclusionKind, String> {
+    match value {
+        "executable" => Ok(TrackingExclusionKind::Executable),
+        "window_title" => Ok(TrackingExclusionKind::WindowTitle),
+        "category" => Ok(TrackingExclusionKind::Category),
+        _ => Err(format!("unsupported exclusion kind: {value}")),
     }
 }
 
