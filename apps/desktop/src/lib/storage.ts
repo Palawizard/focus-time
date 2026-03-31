@@ -2,13 +2,19 @@ import { invoke } from "@tauri-apps/api/core";
 
 import type {
   CreateTrackingExclusionRuleRequest,
+  ExportHistoryRequest,
+  ExportHistoryResult,
   CreateSessionRequest,
   CreateSessionSegmentRequest,
   DailyStat,
   DevelopmentSeedReport,
+  HistorySessionDetail,
+  HistorySessionsPage,
+  ReplaceSessionRequest,
   SaveDailyStatRequest,
   Session,
   SessionSegment,
+  SessionHistoryFilters,
   TrackedApp,
   TrackedWindowEvent,
   TrackingExclusionRule,
@@ -21,8 +27,30 @@ export function listSessions(limit = 30) {
   return invoke<Session[]>("list_sessions", { limit });
 }
 
+export function listHistorySessions(
+  limit = 20,
+  offset = 0,
+  filters?: SessionHistoryFilters,
+) {
+  return invoke<HistorySessionsPage>("list_history_sessions", {
+    request: { limit, offset, filters },
+  });
+}
+
+export function getHistorySessionDetail(sessionId: number) {
+  return invoke<HistorySessionDetail>("get_history_session_detail", { sessionId });
+}
+
 export function createSession(request: CreateSessionRequest) {
   return invoke<Session>("create_session", { request });
+}
+
+export function replaceSession(request: ReplaceSessionRequest) {
+  return invoke<Session>("replace_session", { request });
+}
+
+export function deleteSession(sessionId: number) {
+  return invoke<void>("delete_session", { sessionId });
 }
 
 export function listSessionSegments(sessionId: number) {
@@ -71,6 +99,10 @@ export function createTrackingExclusionRule(
 
 export function deleteTrackingExclusionRule(ruleId: number) {
   return invoke<void>("delete_tracking_exclusion_rule", { ruleId });
+}
+
+export function exportHistory(request: ExportHistoryRequest) {
+  return invoke<ExportHistoryResult>("export_history", { request });
 }
 
 export function listDailyStats(limit = 30) {

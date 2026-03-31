@@ -104,6 +104,53 @@ export interface TrackingRuntimeSnapshot {
   isTrackingLive: boolean;
 }
 
+export interface SessionHistoryFilters {
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  minDurationSeconds?: number | null;
+  maxDurationSeconds?: number | null;
+  presetLabel?: string | null;
+  status?: SessionStatus | null;
+  trackedAppId?: number | null;
+}
+
+export interface HistorySessionApp {
+  trackedAppId: number;
+  name: string;
+  executable: string;
+  category: TrackingCategory;
+  colorHex: string | null;
+  durationSeconds: number;
+}
+
+export interface HistorySessionSummary {
+  session: Session;
+  totalDurationSeconds: number;
+  trackedApps: HistorySessionApp[];
+  interruptionCount: number;
+  interruptionSeconds: number;
+}
+
+export interface HistorySessionsPage {
+  items: HistorySessionSummary[];
+  nextOffset: number | null;
+}
+
+export interface SessionSegmentDetail {
+  segment: SessionSegment;
+  trackedApp: TrackedApp | null;
+}
+
+export interface HistorySessionDetail {
+  session: Session;
+  totalDurationSeconds: number;
+  trackedApps: HistorySessionApp[];
+  segments: SessionSegmentDetail[];
+  trackedWindowEvents: TrackedWindowEvent[];
+  interruptionCount: number;
+  interruptionSeconds: number;
+}
+
 export interface DailyStat {
   date: string;
   focusSeconds: number;
@@ -157,6 +204,31 @@ export interface UpsertTrackedAppRequest {
 export interface CreateTrackingExclusionRuleRequest {
   kind: TrackingExclusionKind;
   pattern: string;
+}
+
+export interface ReplaceSessionRequest {
+  sessionId: number;
+  startedAt: string;
+  endedAt?: string | null;
+  plannedFocusMinutes: number;
+  actualFocusSeconds: number;
+  breakSeconds: number;
+  status: SessionStatus;
+  presetLabel?: string | null;
+  note?: string | null;
+}
+
+export type HistoryExportFormat = "csv" | "json";
+
+export interface ExportHistoryRequest {
+  format: HistoryExportFormat;
+  filters?: SessionHistoryFilters | null;
+}
+
+export interface ExportHistoryResult {
+  path: string;
+  format: HistoryExportFormat;
+  sessionsExported: number;
 }
 
 export interface SaveDailyStatRequest {
