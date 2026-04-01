@@ -3,6 +3,7 @@ mod runtime;
 mod storage;
 mod tracker;
 
+pub use focus_stats::{StatsDashboard, StatsPeriod};
 pub use pomodoro::PomodoroService;
 pub use pomodoro::StartPomodoroInput;
 pub use runtime::{RuntimeHealth, RuntimeService};

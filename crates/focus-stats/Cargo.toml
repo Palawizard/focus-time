@@ -4,3 +4,8 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
+
+[dependencies]
+chrono.workspace = true
+serde.workspace = true
+focus-domain = { path = "../focus-domain" }

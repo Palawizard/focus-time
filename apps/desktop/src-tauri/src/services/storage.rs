@@ -13,6 +13,7 @@ use focus_persistence::{
     Repositories, SaveDailyStatInput, SessionHistoryFiltersInput, UpdateSessionInput,
     UpsertTrackedAppInput,
 };
+use focus_stats::{BuildDashboardInput, StatsDashboard, StatsPeriod};
 use serde::Serialize;
 use sqlx::SqlitePool;
 
@@ -408,6 +409,46 @@ impl StorageService {
             .list(limit)
             .await
             .map_err(Into::into)
+    }
+
+    pub async fn get_stats_dashboard(&self, period: StatsPeriod) -> anyhow::Result<StatsDashboard> {
+        let today = Utc::now().date_naive();
+        let range = focus_stats::resolve_range(period, today, today);
+        let sessions = self
+            .repositories
+            .sessions
+            .list_filtered(ListSessionsPageInput {
+                limit: None,
+                offset: 0,
+                filters: SessionHistoryFiltersInput {
+                    date_to: Some(range.end_date.format("%Y-%m-%d").to_string()),
+                    ..SessionHistoryFiltersInput::default()
+                },
+            })
+            .await?;
+        let current_session_ids = sessions
+            .iter()
+            .filter(|session| {
+                let date = session.started_at.date_naive();
+                date >= range.start_date && date <= range.end_date
+            })
+            .map(|session| session.id)
+            .collect::<Vec<_>>();
+        let current_segments = self
+            .repositories
+            .sessions
+            .list_segments_for_sessions(&current_session_ids)
+            .await?;
+        let tracked_apps = self.repositories.tracked_apps.list().await?;
+
+        Ok(focus_stats::build_dashboard(BuildDashboardInput {
+            period,
+            anchor_date: today,
+            today,
+            sessions,
+            current_segments,
+            tracked_apps,
+        }))
     }
 
     pub async fn upsert_daily_stat(

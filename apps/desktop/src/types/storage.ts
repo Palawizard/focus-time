@@ -1,6 +1,11 @@
-export type SessionStatus = "planned" | "in_progress" | "completed" | "cancelled";
+export type SessionStatus =
+  | "planned"
+  | "in_progress"
+  | "completed"
+  | "cancelled";
 export type SessionSegmentKind = "focus" | "break" | "idle";
 export type ThemePreference = "system" | "light" | "dark";
+export type StatsPeriod = "day" | "week" | "month";
 export type TrackingCategory =
   | "development"
   | "browser"
@@ -159,6 +164,74 @@ export interface DailyStat {
   interruptedSessions: number;
   topAppId: number | null;
   updatedAt: string;
+}
+
+export interface StatsRange {
+  startDate: string;
+  endDate: string;
+  comparisonStartDate: string;
+  comparisonEndDate: string;
+  isPartial: boolean;
+}
+
+export interface StatsSummary {
+  focusSeconds: number;
+  breakSeconds: number;
+  totalSessions: number;
+  completedSessions: number;
+  interruptedSessions: number;
+  activeDays: number;
+  completionRate: number;
+  averageFocusSecondsPerActiveDay: number;
+  streakDays: number;
+  bestStreakDays: number;
+}
+
+export interface StatsComparison {
+  focusSecondsDelta: number;
+  focusSecondsRatio: number | null;
+  completionRateDelta: number;
+  completedSessionsDelta: number;
+  interruptedSessionsDelta: number;
+  activeDaysDelta: number;
+}
+
+export interface StatsSeriesBucket {
+  key: string;
+  label: string;
+  shortLabel: string;
+  focusSeconds: number;
+  breakSeconds: number;
+  completedSessions: number;
+  interruptedSessions: number;
+}
+
+export interface StatsWeekdayBucket {
+  weekday: string;
+  label: string;
+  focusSeconds: number;
+  shareRatio: number;
+}
+
+export interface StatsAppDistribution {
+  trackedAppId: number | null;
+  name: string;
+  executable: string | null;
+  category: TrackingCategory | null;
+  colorHex: string | null;
+  focusSeconds: number;
+}
+
+export interface StatsDashboard {
+  period: StatsPeriod;
+  range: StatsRange;
+  summary: StatsSummary;
+  comparison: StatsComparison;
+  topApp: StatsAppDistribution | null;
+  appDistribution: StatsAppDistribution[];
+  focusSeries: StatsSeriesBucket[];
+  weekdayDistribution: StatsWeekdayBucket[];
+  isEmpty: boolean;
 }
 
 export interface UserPreference {
