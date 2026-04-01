@@ -298,12 +298,12 @@ Definition de fini :
 
 ### Epic 6 - Dashboard de stats
 
-- [ ] Definir les KPIs v1 : temps focus, taux de completion, top apps, streak, repartition journaliere.
-- [ ] Construire les agregations dans `focus-stats`.
-- [ ] Afficher vues jour, semaine, mois.
-- [ ] Ajouter graphiques d'evolution et repartition par app.
-- [ ] Ajouter comparaisons simples avec la periode precedente.
-- [ ] Gerer les etats vides et les grosses plages de donnees.
+- [x] Definir les KPIs v1 : temps focus, taux de completion, top apps, streak, repartition journaliere.
+- [x] Construire les agregations dans `focus-stats`.
+- [x] Afficher vues jour, semaine, mois.
+- [x] Ajouter graphiques d'evolution et repartition par app.
+- [x] Ajouter comparaisons simples avec la periode precedente.
+- [x] Gerer les etats vides et les grosses plages de donnees.
 
 Definition de fini :
 

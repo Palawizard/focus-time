@@ -390,6 +390,54 @@ impl SessionRepository {
             .collect()
     }
 
+    pub async fn list_segments_for_sessions(
+        &self,
+        session_ids: &[i64],
+    ) -> Result<Vec<SessionSegment>, PersistenceError> {
+        if session_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut query = QueryBuilder::<Sqlite>::new(
+            r#"
+            SELECT
+              id,
+              session_id,
+              tracked_app_id,
+              kind,
+              window_title,
+              started_at,
+              ended_at,
+              duration_seconds,
+              created_at
+            FROM session_segments
+            WHERE session_id IN (
+            "#,
+        );
+        {
+            let mut separated = query.separated(", ");
+
+            for session_id in session_ids {
+                separated.push_bind(session_id);
+            }
+        }
+        query.push(
+            r#"
+            )
+            ORDER BY started_at ASC
+            "#,
+        );
+
+        let rows = query
+            .build_query_as::<SessionSegmentRow>()
+            .fetch_all(&self.pool)
+            .await?;
+
+        rows.into_iter()
+            .map(SessionSegmentRow::try_into_domain)
+            .collect()
+    }
+
     pub async fn update(&self, input: UpdateSessionInput) -> Result<Session, PersistenceError> {
         sqlx::query(
             r#"

@@ -11,7 +11,8 @@ use tauri::Manager;
 
 use crate::services::{
     HistoryExportFormat, HistoryExportResult, HistoryFiltersInput, HistorySessionDetail,
-    HistorySessionsPage, ReplaceSessionDetailsInput, TrackingRuntimeSnapshot,
+    HistorySessionsPage, ReplaceSessionDetailsInput, StatsDashboard, StatsPeriod,
+    TrackingRuntimeSnapshot,
 };
 use crate::state::AppState;
 
@@ -420,6 +421,18 @@ pub async fn list_daily_stats(
 }
 
 #[tauri::command]
+pub async fn get_stats_dashboard(
+    state: tauri::State<'_, AppState>,
+    period: String,
+) -> Result<StatsDashboard, String> {
+    state
+        .storage
+        .get_stats_dashboard(parse_stats_period(&period)?)
+        .await
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 pub async fn save_daily_stat(
     state: tauri::State<'_, AppState>,
     request: SaveDailyStatRequest,
@@ -501,6 +514,15 @@ fn parse_tracking_exclusion_kind(value: &str) -> Result<TrackingExclusionKind, S
         "window_title" => Ok(TrackingExclusionKind::WindowTitle),
         "category" => Ok(TrackingExclusionKind::Category),
         _ => Err(format!("unsupported exclusion kind: {value}")),
+    }
+}
+
+fn parse_stats_period(value: &str) -> Result<StatsPeriod, String> {
+    match value {
+        "day" => Ok(StatsPeriod::Day),
+        "week" => Ok(StatsPeriod::Week),
+        "month" => Ok(StatsPeriod::Month),
+        _ => Err(format!("unsupported stats period: {value}")),
     }
 }
 

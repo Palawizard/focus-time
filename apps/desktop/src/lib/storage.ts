@@ -17,6 +17,8 @@ import type {
   SessionHistoryFilters,
   TrackedApp,
   TrackedWindowEvent,
+  StatsDashboard,
+  StatsPeriod,
   TrackingExclusionRule,
   TrackingRuntimeSnapshot,
   UpsertTrackedAppRequest,
@@ -38,7 +40,9 @@ export function listHistorySessions(
 }
 
 export function getHistorySessionDetail(sessionId: number) {
-  return invoke<HistorySessionDetail>("get_history_session_detail", { sessionId });
+  return invoke<HistorySessionDetail>("get_history_session_detail", {
+    sessionId,
+  });
 }
 
 export function createSession(request: CreateSessionRequest) {
@@ -65,7 +69,9 @@ export function getUserPreferences() {
   return invoke<UserPreference>("get_user_preferences");
 }
 
-export function saveUserPreferences(request: Omit<UserPreference, "updatedAt">) {
+export function saveUserPreferences(
+  request: Omit<UserPreference, "updatedAt">,
+) {
   return invoke<UserPreference>("save_user_preferences", { request });
 }
 
@@ -107,6 +113,10 @@ export function exportHistory(request: ExportHistoryRequest) {
 
 export function listDailyStats(limit = 30) {
   return invoke<DailyStat[]>("list_daily_stats", { limit });
+}
+
+export function getStatsDashboard(period: StatsPeriod) {
+  return invoke<StatsDashboard>("get_stats_dashboard", { period });
 }
 
 export function saveDailyStat(request: SaveDailyStatRequest) {

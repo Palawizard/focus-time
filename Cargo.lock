@@ -918,6 +918,11 @@ dependencies = [
 [[package]]
 name = "focus-stats"
 version = "0.1.0"
+dependencies = [
+ "chrono",
+ "focus-domain",
+ "serde",
+]
 
 [[package]]
 name = "focus-time-desktop"
