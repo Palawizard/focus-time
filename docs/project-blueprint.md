@@ -35,10 +35,10 @@ Epics deja livres :
 - Epic 4 - App Tracker
 - Epic 5 - Historique et revue des sessions
 - Epic 6 - Dashboard de stats
+- Epic 7 - Gamification legere
 
 Epics restants :
 
-- Epic 7 - Gamification legere
 - Epic 8 - Preferences, fiabilite et packaging
 
 ## 4. Stack recommandee
@@ -337,11 +337,11 @@ Definition de fini :
 
 ### Epic 7 - Gamification legere
 
-- [ ] Definir un systeme simple de streak quotidien.
-- [ ] Ajouter objectifs hebdomadaires configurables.
-- [ ] Ajouter badges de progression non intrusifs.
-- [ ] Debloquer des achievements a partir de regles deterministes.
-- [ ] Afficher la progression sans polluer le flow principal.
+- [x] Definir un systeme simple de streak quotidien.
+- [x] Ajouter objectifs hebdomadaires configurables.
+- [x] Ajouter badges de progression non intrusifs.
+- [x] Debloquer des achievements a partir de regles deterministes.
+- [x] Afficher la progression sans polluer le flow principal.
 
 Definition de fini :
 
