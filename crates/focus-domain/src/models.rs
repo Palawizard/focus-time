@@ -219,6 +219,64 @@ pub struct Achievement {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct Streak {
+    pub current_days: usize,
+    pub best_days: usize,
+    pub today_completed: bool,
+    pub last_active_date: Option<NaiveDate>,
+    pub next_milestone_days: usize,
+    pub is_at_risk: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct WeeklyGoalProgress {
+    pub start_date: NaiveDate,
+    pub end_date: NaiveDate,
+    pub focus_goal_minutes: i32,
+    pub completed_sessions_goal: i32,
+    pub focus_minutes_completed: i64,
+    pub completed_sessions: usize,
+    pub focus_completion_ratio: f64,
+    pub sessions_completion_ratio: f64,
+    pub completed_goal_count: usize,
+    pub is_completed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ProgressBadge {
+    pub slug: String,
+    pub title: String,
+    pub description: String,
+    pub progress_label: String,
+    pub progress_ratio: f64,
+    pub is_unlocked: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct AchievementProgress {
+    pub slug: String,
+    pub title: String,
+    pub description: String,
+    pub progress_current: i64,
+    pub progress_target: i64,
+    pub progress_ratio: f64,
+    pub unlocked_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct GamificationOverview {
+    pub streak: Streak,
+    pub weekly_goal: WeeklyGoalProgress,
+    pub badges: Vec<ProgressBadge>,
+    pub achievements: Vec<AchievementProgress>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct UserPreference {
     pub focus_minutes: i32,
     pub short_break_minutes: i32,
@@ -230,6 +288,8 @@ pub struct UserPreference {
     pub tracking_permission_granted: bool,
     pub tracking_onboarding_completed: bool,
     pub notifications_enabled: bool,
+    pub weekly_focus_goal_minutes: i32,
+    pub weekly_completed_sessions_goal: i32,
     pub theme: ThemePreference,
     pub updated_at: DateTime<Utc>,
 }
@@ -247,6 +307,8 @@ impl Default for UserPreference {
             tracking_permission_granted: false,
             tracking_onboarding_completed: false,
             notifications_enabled: true,
+            weekly_focus_goal_minutes: 240,
+            weekly_completed_sessions_goal: 5,
             theme: ThemePreference::System,
             updated_at: Utc::now(),
         }

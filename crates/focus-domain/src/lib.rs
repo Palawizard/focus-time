@@ -1,10 +1,13 @@
+mod gamification;
 mod models;
 mod pomodoro;
 
+pub use gamification::{build_gamification_overview, BuildGamificationOverviewInput};
 pub use models::{
-    Achievement, DailyStat, PomodoroPreset, Session, SessionSegment, SessionSegmentKind,
-    SessionStatus, ThemePreference, TrackedApp, TrackedWindowEvent, TrackingCategory,
-    TrackingExclusionKind, TrackingExclusionRule, UserPreference,
+    Achievement, AchievementProgress, DailyStat, GamificationOverview, PomodoroPreset,
+    ProgressBadge, Session, SessionSegment, SessionSegmentKind, SessionStatus, Streak,
+    ThemePreference, TrackedApp, TrackedWindowEvent, TrackingCategory, TrackingExclusionKind,
+    TrackingExclusionRule, UserPreference, WeeklyGoalProgress,
 };
 pub use pomodoro::{
     recommended_presets, PomodoroControlState, PomodoroPhase, PomodoroSessionOutcome,
@@ -29,6 +32,7 @@ mod tests {
         let preferences = UserPreference::default();
 
         assert_eq!(preferences.focus_minutes, 25);
+        assert_eq!(preferences.weekly_focus_goal_minutes, 240);
         assert_eq!(preferences.theme, ThemePreference::System);
     }
 

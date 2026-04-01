@@ -1,10 +1,15 @@
-use std::{collections::HashMap, fs, path::PathBuf};
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+    path::PathBuf,
+};
 
 use anyhow::Context;
 use chrono::{NaiveDate, Utc};
 use focus_domain::{
-    DailyStat, Session, SessionSegment, SessionStatus, TrackedApp, TrackedWindowEvent,
-    TrackingCategory, TrackingExclusionKind, TrackingExclusionRule, UserPreference,
+    build_gamification_overview, BuildGamificationOverviewInput, DailyStat, GamificationOverview,
+    Session, SessionSegment, SessionStatus, TrackedApp, TrackedWindowEvent, TrackingCategory,
+    TrackingExclusionKind, TrackingExclusionRule, UserPreference,
 };
 use focus_persistence::{
     connect_database, run_migrations, seed_development_data, CreateSessionInput,
@@ -218,7 +223,8 @@ impl StorageService {
         break_seconds: i64,
         status: SessionStatus,
     ) -> anyhow::Result<Session> {
-        self.repositories
+        let session = self
+            .repositories
             .sessions
             .update(UpdateSessionInput {
                 session_id,
@@ -228,7 +234,10 @@ impl StorageService {
                 status,
             })
             .await
-            .map_err(Into::into)
+            .map_err(anyhow::Error::from)?;
+        self.refresh_gamification_state().await?;
+
+        Ok(session)
     }
 
     pub async fn list_session_segments(
@@ -265,11 +274,15 @@ impl StorageService {
         &self,
         preferences: &UserPreference,
     ) -> anyhow::Result<UserPreference> {
-        self.repositories
+        let preferences = self
+            .repositories
             .preferences
             .save(preferences)
             .await
-            .map_err(Into::into)
+            .map_err(anyhow::Error::from)?;
+        self.refresh_gamification_state().await?;
+
+        Ok(preferences)
     }
 
     pub async fn list_tracked_apps(&self) -> anyhow::Result<Vec<TrackedApp>> {
@@ -295,7 +308,8 @@ impl StorageService {
         &self,
         input: ReplaceSessionDetailsInput,
     ) -> anyhow::Result<Session> {
-        self.repositories
+        let session = self
+            .repositories
             .sessions
             .replace(ReplaceSessionInput {
                 session_id: input.session_id,
@@ -309,7 +323,10 @@ impl StorageService {
                 note: input.note,
             })
             .await
-            .map_err(Into::into)
+            .map_err(anyhow::Error::from)?;
+        self.refresh_gamification_state().await?;
+
+        Ok(session)
     }
 
     pub async fn delete_session(&self, session_id: i64) -> anyhow::Result<()> {
@@ -449,6 +466,50 @@ impl StorageService {
             current_segments,
             tracked_apps,
         }))
+    }
+
+    pub async fn get_gamification_overview(&self) -> anyhow::Result<GamificationOverview> {
+        let today = Utc::now().date_naive();
+        let sessions = self
+            .repositories
+            .sessions
+            .list_filtered(ListSessionsPageInput {
+                limit: None,
+                offset: 0,
+                filters: SessionHistoryFiltersInput::default(),
+            })
+            .await?;
+        let preferences = self.repositories.preferences.get().await?;
+        let unlocked_achievements = self.repositories.achievements.list().await?;
+        let unlocked_slugs = unlocked_achievements
+            .iter()
+            .filter(|achievement| achievement.unlocked_at.is_some())
+            .map(|achievement| achievement.slug.clone())
+            .collect::<HashSet<_>>();
+        let overview = build_gamification_overview(BuildGamificationOverviewInput {
+            today,
+            sessions: sessions.clone(),
+            preferences: preferences.clone(),
+            unlocked_achievements,
+        });
+
+        if self
+            .persist_unlocked_achievements(&overview, &unlocked_slugs)
+            .await?
+        {
+            let refreshed_achievements = self.repositories.achievements.list().await?;
+
+            return Ok(build_gamification_overview(
+                BuildGamificationOverviewInput {
+                    today,
+                    sessions,
+                    preferences,
+                    unlocked_achievements: refreshed_achievements,
+                },
+            ));
+        }
+
+        Ok(overview)
     }
 
     pub async fn upsert_daily_stat(
@@ -609,6 +670,40 @@ impl HistoryFiltersInput {
             status: self.status,
             tracked_app_id: self.tracked_app_id,
         }
+    }
+}
+
+impl StorageService {
+    async fn refresh_gamification_state(&self) -> anyhow::Result<()> {
+        let _ = self.get_gamification_overview().await?;
+
+        Ok(())
+    }
+
+    async fn persist_unlocked_achievements(
+        &self,
+        overview: &GamificationOverview,
+        unlocked_slugs: &HashSet<String>,
+    ) -> anyhow::Result<bool> {
+        let mut has_new_unlocks = false;
+
+        for achievement in &overview.achievements {
+            let Some(unlocked_at) = achievement.unlocked_at else {
+                continue;
+            };
+
+            if unlocked_slugs.contains(&achievement.slug) {
+                continue;
+            }
+
+            self.repositories
+                .achievements
+                .unlock(&achievement.slug, &achievement.title, unlocked_at)
+                .await?;
+            has_new_unlocks = true;
+        }
+
+        Ok(has_new_unlocks)
     }
 }
 

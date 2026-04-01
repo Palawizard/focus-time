@@ -1,8 +1,8 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use focus_domain::{
-    DailyStat, Session, SessionSegment, SessionSegmentKind, SessionStatus, ThemePreference,
-    TrackedApp, TrackedWindowEvent, TrackingCategory, TrackingExclusionKind, TrackingExclusionRule,
-    UserPreference,
+    Achievement, DailyStat, Session, SessionSegment, SessionSegmentKind, SessionStatus,
+    ThemePreference, TrackedApp, TrackedWindowEvent, TrackingCategory, TrackingExclusionKind,
+    TrackingExclusionRule, UserPreference,
 };
 use sqlx::{FromRow, QueryBuilder, Sqlite, SqlitePool};
 
@@ -34,12 +34,18 @@ pub struct TrackingRepository {
 }
 
 #[derive(Debug, Clone)]
+pub struct AchievementRepository {
+    pool: SqlitePool,
+}
+
+#[derive(Debug, Clone)]
 pub struct Repositories {
     pub sessions: SessionRepository,
     pub preferences: PreferencesRepository,
     pub tracked_apps: TrackedAppRepository,
     pub daily_stats: DailyStatRepository,
     pub tracking: TrackingRepository,
+    pub achievements: AchievementRepository,
 }
 
 #[derive(Debug, Clone)]
@@ -165,7 +171,8 @@ impl Repositories {
             preferences: PreferencesRepository::new(pool.clone()),
             tracked_apps: TrackedAppRepository::new(pool.clone()),
             tracking: TrackingRepository::new(pool.clone()),
-            daily_stats: DailyStatRepository::new(pool),
+            daily_stats: DailyStatRepository::new(pool.clone()),
+            achievements: AchievementRepository::new(pool),
         }
     }
 }
@@ -633,6 +640,8 @@ impl PreferencesRepository {
               tracking_permission_granted,
               tracking_onboarding_completed,
               notifications_enabled,
+              weekly_focus_goal_minutes,
+              weekly_completed_sessions_goal,
               theme,
               updated_at
             FROM user_preferences
@@ -663,6 +672,8 @@ impl PreferencesRepository {
               tracking_permission_granted = ?,
               tracking_onboarding_completed = ?,
               notifications_enabled = ?,
+              weekly_focus_goal_minutes = ?,
+              weekly_completed_sessions_goal = ?,
               theme = ?,
               updated_at = ?
             WHERE id = 1
@@ -678,6 +689,8 @@ impl PreferencesRepository {
         .bind(preferences.tracking_permission_granted)
         .bind(preferences.tracking_onboarding_completed)
         .bind(preferences.notifications_enabled)
+        .bind(preferences.weekly_focus_goal_minutes)
+        .bind(preferences.weekly_completed_sessions_goal)
         .bind(preferences.theme.as_str())
         .bind(Utc::now().to_rfc3339())
         .execute(&self.pool)
@@ -919,6 +932,76 @@ impl DailyStatRepository {
             "#,
         )
         .bind(input.date.format("%Y-%m-%d").to_string())
+        .fetch_one(&self.pool)
+        .await?;
+
+        row.try_into_domain()
+    }
+}
+
+impl AchievementRepository {
+    pub fn new(pool: SqlitePool) -> Self {
+        Self { pool }
+    }
+
+    pub async fn list(&self) -> Result<Vec<Achievement>, PersistenceError> {
+        let rows = sqlx::query_as::<_, AchievementRow>(
+            r#"
+            SELECT
+              id,
+              slug,
+              title,
+              unlocked_at,
+              created_at
+            FROM achievements
+            ORDER BY created_at ASC, id ASC
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.into_iter()
+            .map(AchievementRow::try_into_domain)
+            .collect()
+    }
+
+    pub async fn unlock(
+        &self,
+        slug: &str,
+        title: &str,
+        unlocked_at: DateTime<Utc>,
+    ) -> Result<Achievement, PersistenceError> {
+        let timestamp = unlocked_at.to_rfc3339();
+
+        sqlx::query(
+            r#"
+            INSERT INTO achievements (slug, title, unlocked_at, created_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(slug) DO UPDATE SET
+              title = excluded.title,
+              unlocked_at = COALESCE(achievements.unlocked_at, excluded.unlocked_at)
+            "#,
+        )
+        .bind(slug)
+        .bind(title)
+        .bind(timestamp.clone())
+        .bind(timestamp)
+        .execute(&self.pool)
+        .await?;
+
+        let row = sqlx::query_as::<_, AchievementRow>(
+            r#"
+            SELECT
+              id,
+              slug,
+              title,
+              unlocked_at,
+              created_at
+            FROM achievements
+            WHERE slug = ?
+            "#,
+        )
+        .bind(slug)
         .fetch_one(&self.pool)
         .await?;
 
@@ -1330,6 +1413,30 @@ impl DailyStatRow {
 }
 
 #[derive(Debug, FromRow)]
+struct AchievementRow {
+    id: i64,
+    slug: String,
+    title: String,
+    unlocked_at: Option<String>,
+    created_at: String,
+}
+
+impl AchievementRow {
+    fn try_into_domain(self) -> Result<Achievement, PersistenceError> {
+        Ok(Achievement {
+            id: self.id,
+            slug: self.slug,
+            title: self.title,
+            unlocked_at: self
+                .unlocked_at
+                .map(|value| parse_datetime(&value))
+                .transpose()?,
+            created_at: parse_datetime(&self.created_at)?,
+        })
+    }
+}
+
+#[derive(Debug, FromRow)]
 struct UserPreferenceRow {
     focus_minutes: i32,
     short_break_minutes: i32,
@@ -1341,6 +1448,8 @@ struct UserPreferenceRow {
     tracking_permission_granted: bool,
     tracking_onboarding_completed: bool,
     notifications_enabled: bool,
+    weekly_focus_goal_minutes: i32,
+    weekly_completed_sessions_goal: i32,
     theme: String,
     updated_at: String,
 }
@@ -1358,6 +1467,8 @@ impl UserPreferenceRow {
             tracking_permission_granted: self.tracking_permission_granted,
             tracking_onboarding_completed: self.tracking_onboarding_completed,
             notifications_enabled: self.notifications_enabled,
+            weekly_focus_goal_minutes: self.weekly_focus_goal_minutes,
+            weekly_completed_sessions_goal: self.weekly_completed_sessions_goal,
             theme: parse_theme_preference(&self.theme)?,
             updated_at: parse_datetime(&self.updated_at)?,
         })

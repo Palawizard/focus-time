@@ -4,6 +4,7 @@ import type {
   CreateTrackingExclusionRuleRequest,
   ExportHistoryRequest,
   ExportHistoryResult,
+  GamificationOverview,
   CreateSessionRequest,
   CreateSessionSegmentRequest,
   DailyStat,
@@ -117,6 +118,10 @@ export function listDailyStats(limit = 30) {
 
 export function getStatsDashboard(period: StatsPeriod) {
   return invoke<StatsDashboard>("get_stats_dashboard", { period });
+}
+
+export function getGamificationOverview() {
+  return invoke<GamificationOverview>("get_gamification_overview");
 }
 
 export function saveDailyStat(request: SaveDailyStatRequest) {

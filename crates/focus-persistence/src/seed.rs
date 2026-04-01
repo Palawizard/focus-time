@@ -49,6 +49,8 @@ pub async fn seed_development_data(
           tracking_permission_granted = 1,
           tracking_onboarding_completed = 1,
           notifications_enabled = 1,
+          weekly_focus_goal_minutes = 240,
+          weekly_completed_sessions_goal = 5,
           theme = 'system',
           updated_at = ?
         WHERE id = 1

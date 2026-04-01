@@ -12,12 +12,12 @@ pub use migrations::{
     list_applied_migrations, run_migrations, AppliedMigration, MigrationDefinition, MigrationError,
 };
 pub use repositories::{
-    CreateSessionInput, CreateSessionSegmentInput, CreateTrackedWindowEventInput,
-    CreateTrackingExclusionRuleInput, DailyStatRepository, ListSessionsPageInput,
-    PreferencesRepository, RegisterTrackedAppInput, ReplaceSessionInput, Repositories,
-    SaveDailyStatInput, SessionAppUsageSlice, SessionHistoryFiltersInput, SessionInterruptionSlice,
-    SessionRepository, TrackedAppRepository, TrackingRepository, UpdateSessionInput,
-    UpsertTrackedAppInput,
+    AchievementRepository, CreateSessionInput, CreateSessionSegmentInput,
+    CreateTrackedWindowEventInput, CreateTrackingExclusionRuleInput, DailyStatRepository,
+    ListSessionsPageInput, PreferencesRepository, RegisterTrackedAppInput, ReplaceSessionInput,
+    Repositories, SaveDailyStatInput, SessionAppUsageSlice, SessionHistoryFiltersInput,
+    SessionInterruptionSlice, SessionRepository, TrackedAppRepository, TrackingRepository,
+    UpdateSessionInput, UpsertTrackedAppInput,
 };
 pub use schema::{initial_schema, DatabaseSchema, TableDefinition};
 pub use seed::{seed_development_data, DevelopmentSeedReport};
