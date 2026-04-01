@@ -1,6 +1,9 @@
 export type PomodoroPhase = "focus" | "shortBreak" | "longBreak";
 export type PomodoroControlState = "idle" | "running" | "paused";
-export type PomodoroSessionOutcome = "completed" | "interrupted" | "skippedBreak";
+export type PomodoroSessionOutcome =
+  | "completed"
+  | "interrupted"
+  | "skippedBreak";
 export type PomodoroTransitionKind =
   | "sessionStarted"
   | "paused"

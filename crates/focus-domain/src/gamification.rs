@@ -348,6 +348,10 @@ mod tests {
                 tracking_permission_granted: true,
                 tracking_onboarding_completed: true,
                 notifications_enabled: true,
+                sound_enabled: false,
+                launch_on_startup: false,
+                tray_enabled: true,
+                close_to_tray: true,
                 theme: ThemePreference::System,
                 updated_at: Utc::now(),
             },
@@ -364,15 +368,12 @@ mod tests {
         assert!(overview.weekly_goal.is_completed);
         assert_eq!(overview.weekly_goal.completed_goal_count, 2);
         assert_eq!(overview.badges.len(), 3);
-        assert_eq!(
-            overview
-                .achievements
-                .iter()
-                .find(|achievement| achievement.slug == "first-session")
-                .and_then(|achievement| achievement.unlocked_at)
-                .is_some(),
-            true
-        );
+        assert!(overview
+            .achievements
+            .iter()
+            .find(|achievement| achievement.slug == "first-session")
+            .and_then(|achievement| achievement.unlocked_at)
+            .is_some());
         assert_eq!(
             overview
                 .achievements

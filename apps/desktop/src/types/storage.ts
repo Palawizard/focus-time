@@ -282,6 +282,13 @@ export interface GamificationOverview {
   achievements: AchievementProgress[];
 }
 
+export interface BackupArchiveSummary {
+  fileName: string;
+  path: string;
+  createdAt: string;
+  sizeBytes: number;
+}
+
 export interface UserPreference {
   focusMinutes: number;
   shortBreakMinutes: number;
@@ -293,8 +300,12 @@ export interface UserPreference {
   trackingPermissionGranted: boolean;
   trackingOnboardingCompleted: boolean;
   notificationsEnabled: boolean;
+  soundEnabled: boolean;
   weeklyFocusGoalMinutes: number;
   weeklyCompletedSessionsGoal: number;
+  launchOnStartup: boolean;
+  trayEnabled: boolean;
+  closeToTray: boolean;
   theme: ThemePreference;
   updatedAt: string;
 }

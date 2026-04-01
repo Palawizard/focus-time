@@ -1,9 +1,14 @@
 import { useEffect, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 
 import { Button } from "../../components/ui/Button";
-import { Card, CardDescription, CardHeader, CardTitle } from "../../components/ui/Card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/Card";
 import {
   pausePomodoro,
   resumePomodoro,
@@ -11,7 +16,12 @@ import {
   startPomodoro,
   stopPomodoro,
 } from "../../lib/pomodoro";
-import { getGamificationOverview, getUserPreferences, listSessions } from "../../lib/storage";
+import {
+  getGamificationOverview,
+  getUserPreferences,
+  listSessions,
+  saveUserPreferences,
+} from "../../lib/storage";
 import { usePomodoroPreferencesStore } from "../../stores/pomodoro-preferences-store";
 import { usePomodoroStore } from "../../stores/pomodoro-store";
 import type { StartPomodoroRequest } from "../../types/pomodoro";
@@ -41,9 +51,14 @@ const quickPresets = [
 ] as const;
 
 export function FocusScreen() {
+  const queryClient = useQueryClient();
   const snapshot = usePomodoroStore((state) => state.snapshot);
-  const soundEnabled = usePomodoroPreferencesStore((state) => state.soundEnabled);
-  const toggleSound = usePomodoroPreferencesStore((state) => state.toggleSound);
+  const soundEnabled = usePomodoroPreferencesStore(
+    (state) => state.soundEnabled,
+  );
+  const setSoundEnabled = usePomodoroPreferencesStore(
+    (state) => state.setSoundEnabled,
+  );
   const userPreferences = useQuery({
     queryKey: ["user-preferences"],
     queryFn: getUserPreferences,
@@ -65,17 +80,35 @@ export function FocusScreen() {
   const resumeMutation = useMutation({ mutationFn: resumePomodoro });
   const stopMutation = useMutation({ mutationFn: stopPomodoro });
   const skipMutation = useMutation({ mutationFn: skipPomodoroBreak });
+  const saveSoundPreferenceMutation = useMutation({
+    mutationFn: (nextSoundEnabled: boolean) => {
+      if (!userPreferences.data) {
+        throw new Error("Preferences are not loaded yet.");
+      }
+
+      return saveUserPreferences({
+        ...stripUpdatedAt(userPreferences.data),
+        soundEnabled: nextSoundEnabled,
+      });
+    },
+    onSuccess: async (preferences) => {
+      setSoundEnabled(preferences.soundEnabled);
+      await queryClient.invalidateQueries({ queryKey: ["user-preferences"] });
+    },
+  });
 
   const preferenceLabel = "Custom";
   const preferenceFocusMinutes = userPreferences.data?.focusMinutes ?? 25;
   const preferenceShortBreakMinutes =
     userPreferences.data?.shortBreakMinutes ?? 5;
-  const preferenceLongBreakMinutes = userPreferences.data?.longBreakMinutes ?? 15;
+  const preferenceLongBreakMinutes =
+    userPreferences.data?.longBreakMinutes ?? 15;
   const preferenceSessionsUntilLongBreak =
     userPreferences.data?.sessionsUntilLongBreak ?? 4;
   const preferenceAutoStartBreaks =
     userPreferences.data?.autoStartBreaks ?? false;
-  const preferenceAutoStartFocus = userPreferences.data?.autoStartFocus ?? false;
+  const preferenceAutoStartFocus =
+    userPreferences.data?.autoStartFocus ?? false;
   const preferencePreset: StartPomodoroRequest = {
     label: preferenceLabel,
     focusMinutes: preferenceFocusMinutes,
@@ -115,17 +148,25 @@ export function FocusScreen() {
   ]);
 
   useEffect(() => {
-    if (snapshot.controlState === "running" || snapshot.controlState === "paused") {
+    if (
+      snapshot.controlState === "running" ||
+      snapshot.controlState === "paused"
+    ) {
       return;
     }
 
     void refetchGamification();
   }, [refetchGamification, snapshot.controlState, snapshot.sessionId]);
 
+  const runtimePreset: StartPomodoroRequest = {
+    ...snapshot.preset,
+    autoStartBreaks: snapshot.autoStartBreaks,
+    autoStartFocus: snapshot.autoStartFocus,
+  };
   const configuredPreset =
     snapshot.controlState === "idle"
       ? (selectedPreset ?? preferencePreset)
-      : snapshot.preset;
+      : runtimePreset;
   const phaseLabel =
     snapshot.phase === "focus"
       ? "Focus"
@@ -144,6 +185,14 @@ export function FocusScreen() {
           ),
         )
       : 0;
+  const handleToggleSound = () => {
+    const nextSoundEnabled = !soundEnabled;
+
+    setSoundEnabled(nextSoundEnabled);
+    saveSoundPreferenceMutation.mutate(nextSoundEnabled, {
+      onError: () => setSoundEnabled(soundEnabled),
+    });
+  };
 
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(21rem,1fr)]">
@@ -211,7 +260,13 @@ export function FocusScreen() {
               Skip break
             </Button>
           ) : null}
-          <Button onClick={toggleSound} variant="ghost">
+          <Button
+            disabled={
+              !userPreferences.data || saveSoundPreferenceMutation.isPending
+            }
+            onClick={handleToggleSound}
+            variant="ghost"
+          >
             {soundEnabled ? "Sound on" : "Sound off"}
           </Button>
         </div>
@@ -316,7 +371,8 @@ export function FocusScreen() {
               {gamificationQuery.data ? (
                 <div className="flex flex-wrap gap-2">
                   <span className="ft-brand-badge rounded-full px-2.5 py-1 text-[11px] font-medium">
-                    {gamificationQuery.data.weeklyGoal.completedGoalCount}/2 weekly goals
+                    {gamificationQuery.data.weeklyGoal.completedGoalCount}/2
+                    weekly goals
                   </span>
                   <span className="ft-brand-badge rounded-full px-2.5 py-1 text-[11px] font-medium">
                     {
@@ -352,7 +408,7 @@ function PresetButton({
   return (
     <button
       className={[
-        "ft-panel-muted ft-interactive-panel rounded-[1rem] px-4 py-4 text-left",
+        "ft-panel-muted cursor-pointer rounded-[1rem] px-4 py-4 text-left transition-[background-color,border-color,transform,box-shadow] duration-150 ease-in-out hover:-translate-y-[1px] hover:border-[var(--color-border-strong)] hover:bg-[var(--color-brand-soft)] active:translate-y-0",
         active
           ? "border-[var(--color-border-strong)] bg-[var(--color-brand-soft)] shadow-[0_14px_32px_rgba(0,0,0,0.12)]"
           : "",
@@ -389,4 +445,13 @@ function formatDuration(totalSeconds: number) {
     .padStart(2, "0");
 
   return `${minutes}:${seconds}`;
+}
+
+function stripUpdatedAt<T extends { updatedAt: unknown }>(
+  value: T,
+): Omit<T, "updatedAt"> {
+  const request = { ...value };
+  Reflect.deleteProperty(request, "updatedAt");
+
+  return request;
 }

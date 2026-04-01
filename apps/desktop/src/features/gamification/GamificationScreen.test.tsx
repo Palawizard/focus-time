@@ -1,3 +1,4 @@
+// noinspection JSUnusedGlobalSymbols
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -5,13 +6,12 @@ import { GamificationScreen } from "./GamificationScreen";
 
 const getGamificationOverview = vi.fn();
 const getUserPreferences = vi.fn();
-const saveUserPreferences = vi.fn();
 
 vi.mock("../../lib/storage", () => ({
   getGamificationOverview: (...args: unknown[]) =>
     getGamificationOverview(...args),
   getUserPreferences: (...args: unknown[]) => getUserPreferences(...args),
-  saveUserPreferences: (...args: unknown[]) => saveUserPreferences(...args),
+  saveUserPreferences: vi.fn(),
 }));
 
 describe("GamificationScreen", () => {

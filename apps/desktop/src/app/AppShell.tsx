@@ -1,5 +1,13 @@
+import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AppWindow, ChartColumnBig, History, SlidersHorizontal, TimerReset, Trophy } from "lucide-react";
+import {
+  AppWindow,
+  ChartColumnBig,
+  History,
+  SlidersHorizontal,
+  TimerReset,
+  Trophy,
+} from "lucide-react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { Button } from "../components/ui/Button";
@@ -12,7 +20,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../components/ui/Dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/Tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../components/ui/Tooltip";
 import { GamificationScreen } from "../features/gamification/GamificationScreen";
 import { HistoryScreen } from "../features/history/HistoryScreen";
 import { FocusScreen } from "../features/pomodoro/FocusScreen";
@@ -25,7 +38,7 @@ import { DesktopShell, type ShellRouteItem } from "./DesktopShell";
 const routes: Array<
   ShellRouteItem & {
     description: string;
-    element: React.ReactNode;
+    element: ReactNode;
     eyebrow: string;
     title: string;
   }
@@ -147,7 +160,11 @@ function AppShellFrame() {
         <section className="flex flex-1 flex-col gap-5 overflow-auto p-5 sm:p-6">
           <Routes>
             {routes.map((route) => (
-              <Route key={route.path} element={route.element} path={route.path} />
+              <Route
+                key={route.path}
+                element={route.element}
+                path={route.path}
+              />
             ))}
             <Route element={<Navigate replace to="/" />} path="*" />
           </Routes>

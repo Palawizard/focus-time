@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 interface PomodoroPreferencesStore {
   soundEnabled: boolean;
+  setSoundEnabled: (soundEnabled: boolean) => void;
   toggleSound: () => void;
 }
 
@@ -18,6 +19,13 @@ function getStoredSoundEnabled() {
 export const usePomodoroPreferencesStore = create<PomodoroPreferencesStore>(
   (set) => ({
     soundEnabled: getStoredSoundEnabled(),
+    setSoundEnabled: (soundEnabled) => {
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(STORAGE_KEY, String(soundEnabled));
+      }
+
+      set({ soundEnabled });
+    },
     toggleSound: () =>
       set((state) => {
         const soundEnabled = !state.soundEnabled;

@@ -26,12 +26,28 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": "v1Compatible",
+    "publisher": "Palawizard",
+    "homepage": "https://github.com/Palawizard/focus-time",
+    "copyright": "Copyright (c) 2026 Palawizard",
+    "license": "MIT",
+    "category": "Productivity",
+    "shortDescription": "A local-first focus timer with tracking, recovery and desktop controls.",
+    "longDescription": "Focus Time helps you run Pomodoro sessions, review history, track app activity, recover from mistakes with local backups and ship a polished desktop experience from a single local workspace.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com",
+      "signCommand": {
+        "cmd": "bash",
+        "args": ["../../../scripts/sign-desktop.sh", "%1"]
+      }
+    }
   }
 }

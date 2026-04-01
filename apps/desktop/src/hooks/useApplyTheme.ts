@@ -7,7 +7,8 @@ export function useApplyTheme() {
   const setResolvedTheme = useThemeStore((state) => state.setResolvedTheme);
 
   const applyTheme = useEffectEvent((matchesDark: boolean) => {
-    const resolvedTheme = mode === "system" ? (matchesDark ? "dark" : "light") : mode;
+    const resolvedTheme =
+      mode === "system" ? (matchesDark ? "dark" : "light") : mode;
 
     document.documentElement.dataset.theme = resolvedTheme;
     setResolvedTheme(resolvedTheme);

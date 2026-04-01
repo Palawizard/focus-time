@@ -1,9 +1,6 @@
 import { create } from "zustand";
 
-import type {
-  PomodoroSnapshot,
-  PomodoroTransition,
-} from "../types/pomodoro";
+import type { PomodoroSnapshot, PomodoroTransition } from "../types/pomodoro";
 import { defaultPomodoroSnapshot } from "../types/pomodoro";
 
 interface PomodoroStore {

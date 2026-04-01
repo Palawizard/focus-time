@@ -14,7 +14,7 @@ pub struct DatabaseSchema {
 
 pub fn initial_schema() -> DatabaseSchema {
     DatabaseSchema {
-        version: 4,
+        version: 5,
         tables: vec![
             TableDefinition {
                 name: "sessions",

@@ -15,7 +15,9 @@ const notifyKinds = new Set<PomodoroTransitionKind>([
 
 export function usePomodoroNotifications() {
   const transition = usePomodoroStore((state) => state.transition);
-  const soundEnabled = usePomodoroPreferencesStore((state) => state.soundEnabled);
+  const soundEnabled = usePomodoroPreferencesStore(
+    (state) => state.soundEnabled,
+  );
   const lastHandledTransitionId = useRef<number | null>(null);
 
   const userPreferences = useQuery({
