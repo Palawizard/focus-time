@@ -4,7 +4,7 @@
 
 Focus Time doit aider un utilisateur a comprendre comment il travaille, pas seulement combien de temps il lance un timer.
 
-Le produit vise 5 piliers :
+Le produit vise cinq piliers :
 
 1. lancer des sessions Pomodoro rapidement
 2. suivre automatiquement l'application active pendant le travail
@@ -24,7 +24,24 @@ Choix structurants :
 - fonctionnement hors ligne
 - Windows prioritaire, Linux supporte avec nuance selon l'environnement graphique
 
-## 3. Stack recommandee
+## 3. Etat actuel du projet
+
+Epics deja livres :
+
+- Epic 0 - Fondation du projet
+- Epic 1 - Design system et shell applicatif
+- Epic 2 - Modele de donnees et persistance locale
+- Epic 3 - Moteur Pomodoro
+- Epic 4 - App Tracker
+- Epic 5 - Historique et revue des sessions
+- Epic 6 - Dashboard de stats
+
+Epics restants :
+
+- Epic 7 - Gamification legere
+- Epic 8 - Preferences, fiabilite et packaging
+
+## 4. Stack recommandee
 
 | Domaine | Choix | Pourquoi |
 | --- | --- | --- |
@@ -32,17 +49,17 @@ Choix structurants :
 | Coeur natif | `Rust` | fiable pour les timers, performant pour le tracking, tres bon acces systeme |
 | UI | `React + TypeScript + Vite` | productivite elevee, ecosysteme mature, interface moderne |
 | State management | `Zustand` | simple, leger, adapte a une app desktop locale |
-| Data fetching local | `TanStack Query` | gestion propre des lectures/mutations asynchrones vers les commandes Tauri |
+| Data fetching local | `TanStack Query` | gestion propre des lectures et mutations asynchrones vers les commandes Tauri |
 | UI primitives | `Radix UI` | composants accessibles sans imposer un design fige |
 | Styling | `Tailwind CSS` | iteration rapide pour une UI minimaliste et coherente |
-| Graphiques | `Recharts` | suffisant et simple pour les dashboards de stats |
+| Graphiques | rendu maison simple ou bibliotheque legere si necessaire | eviter une dependance lourde si les besoins restent simples |
 | Base locale | `SQLite` | robuste, portable, parfaite pour une app single-user |
 | Acces DB Rust | `sqlx` | migrations propres, requetes explicites, bon support SQLite |
 | Tests front | `Vitest + React Testing Library` | rapide pour la couche UI |
 | Tests Rust | `cargo test` | naturel pour la logique de domaine et la persistance |
 | E2E desktop | `Playwright + tauri-driver` | verifie les parcours critiques de bout en bout |
 
-## 4. Pourquoi cette stack et pas une autre
+## 5. Pourquoi cette stack et pas une autre
 
 ### Pourquoi Tauri plutot qu'Electron
 
@@ -55,7 +72,7 @@ Choix structurants :
 - tres bon choix UI, mais moins direct pour l'integration web tooling et les dashboards reactifs locaux
 - l'ecosysteme autour des primitives desktop et de l'instrumentation native est moins naturel pour ce type de produit
 
-## 5. Risques et contraintes importantes
+## 6. Risques et contraintes importantes
 
 ### Linux et tracking de fenetre active
 
@@ -77,7 +94,7 @@ Conclusion produit :
 - l'utilisateur doit pouvoir exclure des apps
 - l'utilisateur doit pouvoir desactiver le tracking auto
 
-## 6. Architecture cible
+## 7. Architecture cible
 
 Le repo doit rester simple, mais preparer une separation nette entre :
 
@@ -90,27 +107,27 @@ Le repo doit rester simple, mais preparer une separation nette entre :
 ### Vue logique
 
 1. `apps/desktop/src`
-   Interface utilisateur, navigation, ecrans, composants, stores front.
+   interface utilisateur, navigation, ecrans, composants et stores front
 2. `apps/desktop/src-tauri`
-   Point d'entree Tauri, commandes exposees au front, migrations, ressources desktop.
+   point d'entree Tauri, commandes exposees au front, migrations et services desktop
 3. `crates/focus-domain`
-   Regles metier pures : session, timer, achievements, aggregations.
+   regles metier pures : session, timer, achievements et aggregations metier
 4. `crates/focus-persistence`
-   Acces SQLite, repositories, migrations et DTO de stockage.
+   acces SQLite, repositories, migrations et DTO de stockage
 5. `crates/focus-tracking`
-   Detection application/fenetre active, normalisation des evenements de tracking.
+   detection application ou fenetre active, normalisation des evenements de tracking
 6. `crates/focus-stats`
-   Calculs de dashboard, series journalieres, repartitions par app et categorie.
+   calculs de dashboard, series journalieres et repartitions d'usage
 
 ### Flux principal
 
 1. le front lance une commande Tauri
 2. Tauri delegue a un service Rust
 3. le service lit ou ecrit dans SQLite via `focus-persistence`
-4. les modules `focus-tracking` et `focus-stats` fournissent les donnees metier
+4. `focus-tracking` et `focus-stats` fournissent les donnees metier derivees
 5. le front recupere un payload deja structure pour affichage
 
-## 7. Arborescence retenue
+## 8. Arborescence retenue
 
 ```text
 .
@@ -162,7 +179,7 @@ Le repo doit rester simple, mais preparer une separation nette entre :
 `-- scripts/
 ```
 
-## 8. Modeles metier de base
+## 9. Modeles metier de base
 
 Entites minimales a prevoir :
 
@@ -186,22 +203,22 @@ Entites minimales a prevoir :
 - `achievements`
 - `user_preferences`
 
-## 9. Ecrans cibles v1
+## 10. Ecrans cibles v1
 
 - `Home / Focus`
-  Timer principal, session courante, bouton start/pause/stop.
+  timer principal, session courante, bouton start, pause, resume et stop
 - `History`
-  Liste des sessions passees, filtres par date, duree, tag, application.
+  liste des sessions passees, filtres par date, duree, preset, statut et application
 - `Stats`
-  Temps focus du jour, semaine, mois, top apps, repartitions et tendances.
+  temps focus du jour, semaine, mois, top apps, repartitions et tendances
 - `Tracker`
-  Vue de suivi des apps et regles d'exclusion.
+  vue de suivi des apps et regles d'exclusion
 - `Gamification`
-  Streaks, badges, objectifs simples.
+  streaks, badges et objectifs simples
 - `Settings`
-  Presets Pomodoro, preferences de tracking, exclusions, theme, notifications.
+  presets Pomodoro, preferences de tracking, exclusions, theme et notifications
 
-## 10. Regles d'architecture
+## 11. Regles d'architecture
 
 - la logique timer ne doit pas vivre dans React
 - la source de verite des sessions est SQLite
@@ -210,7 +227,16 @@ Entites minimales a prevoir :
 - les statistiques doivent etre calculables a partir des sessions et evenements bruts
 - toute fonctionnalite sensible doit etre feature-flaggee si elle est instable sur Linux
 
-## 11. Roadmap initiale en epics et taches
+## 12. Conventions d'execution de la roadmap
+
+- la roadmap ci-dessous est la reference d'avancement du projet
+- une case ne peut etre cochee que si le travail est effectivement livre et verifie
+- un epic se travaille sur une branche dediee
+- chaque element de roadmap doit idealement correspondre a un commit propre
+- chaque sous-partie distincte d'un epic doit etre committee separement
+- un commit peut regrouper plusieurs fichiers uniquement s'ils servent la meme sous-partie
+
+## 13. Roadmap initiale en epics et taches
 
 ### Epic 0 - Fondation du projet
 
@@ -234,7 +260,7 @@ Definition de fini :
 - [x] Integrer `Radix UI` et creer les primitives de base : button, card, dialog, tabs, tooltip.
 - [x] Creer les ecrans vides : Focus, History, Stats, Tracker, Gamification, Settings.
 - [x] Poser la navigation et les routes.
-- [x] Ajouter le theming clair/sombre seulement si necessaire au produit.
+- [x] Ajouter le theming clair ou sombre seulement si necessaire au produit.
 
 Definition de fini :
 
@@ -271,7 +297,7 @@ Definition de fini :
 ### Epic 4 - App Tracker
 
 - [x] Definir le format commun d'un evenement de tracking.
-- [x] Implementer l'adaptateur Windows de detection d'application/fenetre active.
+- [x] Implementer l'adaptateur Windows de detection d'application ou fenetre active.
 - [x] Implementer l'adaptateur Linux X11.
 - [x] Ajouter une strategie Linux Wayland de degradation elegante avec message clair si non supporte.
 - [x] Normaliser les noms d'applications et executables.
@@ -334,7 +360,7 @@ Definition de fini :
 
 - une beta installable peut etre partagee
 
-## 12. Premiere version raisonnable
+## 14. Premiere version raisonnable
 
 La meilleure premiere release n'est pas "tout".
 
@@ -344,7 +370,7 @@ Scope recommande pour une `v0.1` :
 - sauvegarde locale des sessions
 - tracking Windows
 - historique simple
-- dashboard minimal jour/semaine
+- dashboard minimal jour ou semaine
 - exclusions basiques
 
 Ce qui peut attendre :
@@ -354,7 +380,7 @@ Ce qui peut attendre :
 - categories intelligentes automatiques
 - coaching ou recommandations
 
-## 13. Conclusion
+## 15. Conclusion
 
 Pour Focus Time, le meilleur compromis est :
 
@@ -362,4 +388,4 @@ Pour Focus Time, le meilleur compromis est :
 - `React + TypeScript` pour une UI rapide a construire et a faire evoluer
 - `SQLite` pour une base locale robuste
 
-Cette combinaison est celle qui colle le mieux au besoin reel du produit : une app locale, performante, moderne, avec du tracking natif et des stats riches.
+Cette combinaison colle au besoin reel du produit : une application locale, performante, moderne, avec du tracking natif et des statistiques riches.

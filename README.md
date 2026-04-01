@@ -1,38 +1,59 @@
 # Focus Time
 
-Focus Time est une application bureau moderne et minimaliste pensée pour Windows et Linux.
-Le produit cible combine :
+Focus Time est une application desktop locale pensee pour aider un utilisateur a mieux comprendre sa facon de travailler, et pas seulement a lancer un timer.
 
-- un minuteur Pomodoro
+Le produit combine cinq briques principales :
+
+- un minuteur Pomodoro fiable
 - un App Tracker local-first
-- un historique de sessions
-- des statistiques d'usage
-- une couche légère de gamification
+- un historique clair des sessions
+- un dashboard de stats lisible
+- une gamification legere et non intrusive
 
-La stack retenue pour le cadrage initial est :
+## Etat du projet
 
-- `Tauri v2` pour l'application desktop
-- `Rust` pour le coeur natif, le tracking et la persistance
+Le socle applicatif est en place et les epics suivants sont deja livres :
+
+- fondation du projet
+- shell applicatif et design system
+- persistance locale SQLite
+- moteur Pomodoro
+- App Tracker
+- historique des sessions
+- dashboard de stats
+
+Les prochains chantiers majeurs concernent la gamification, les preferences avancees, la fiabilite globale et le packaging beta.
+
+## Stack retenue
+
+- `Tauri v2` pour le shell desktop
+- `Rust` pour la logique native, la persistance et le tracking
 - `React + TypeScript + Vite` pour l'interface
 - `SQLite` pour le stockage local
 
-Le cadrage produit et technique détaillé est dans `docs/project-blueprint.md`.
-
-## Workspace
+## Structure du workspace
 
 - `apps/desktop`
-  application React + Tauri
+  application frontend React
 - `apps/desktop/src-tauri`
-  shell desktop et commandes Rust
-- `crates/*`
-  crates Rust du domaine, de la persistence, des stats et du tracking
+  shell desktop, commandes Tauri, migrations et services Rust
+- `crates/focus-domain`
+  modeles et regles metier
+- `crates/focus-persistence`
+  acces SQLite, repositories et migrations
+- `crates/focus-stats`
+  agregations et calculs du dashboard
+- `crates/focus-tracking`
+  detection d'application active et normalisation du tracking
+- `docs/`
+  cadrage produit, roadmap et regles de travail
 
-## Prerequisites
+## Prerequis
 
 - `Node.js 22+`
-- `Rust` via `rustup`
+- `Rust` installe via `rustup`
 - Windows : `Visual Studio Build Tools 2022` avec le workload C++
-- Linux : pre-requis Tauri/WebKitGTK documentes dans la CI
+- Linux : dependances Tauri/WebKitGTK adaptees a la distribution
 
 ## Commandes utiles
 
@@ -40,3 +61,14 @@ Le cadrage produit et technique détaillé est dans `docs/project-blueprint.md`.
 - `corepack pnpm dev`
 - `corepack pnpm check`
 - `corepack pnpm build:desktop`
+
+## Documentation a lire en priorite
+
+- `docs/working-rules.md`
+  regles de contribution, discipline Git et contraintes de livraison
+- `docs/project-blueprint.md`
+  vision produit, architecture cible, roadmap et scope v1
+
+## Rappel de fonctionnement
+
+La documentation du projet fait partie de la source de verite. Avant de travailler sur un epic ou un chantier important, il faut relire les fichiers Markdown du projet et rester aligne avec les choix deja poses.
