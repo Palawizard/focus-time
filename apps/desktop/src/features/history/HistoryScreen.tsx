@@ -16,7 +16,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../components/ui/Dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/Tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../components/ui/Tabs";
 import {
   deleteSession,
   exportHistory,
@@ -97,11 +102,15 @@ const inputClassName =
 export function HistoryScreen() {
   const queryClient = useQueryClient();
   const [filtersDraft, setFiltersDraft] = useState<FilterDraft>(emptyFilters);
-  const [appliedFilters, setAppliedFilters] = useState<SessionHistoryFilters>({});
+  const [appliedFilters, setAppliedFilters] = useState<SessionHistoryFilters>(
+    {},
+  );
   const [offset, setOffset] = useState(0);
   const [items, setItems] = useState<HistorySessionSummary[]>([]);
   const [nextOffset, setNextOffset] = useState<number | null>(null);
-  const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<number | null>(
+    null,
+  );
   const [detailOpen, setDetailOpen] = useState(false);
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
   const [historyFeedback, setHistoryFeedback] = useState<string | null>(null);
@@ -135,7 +144,9 @@ export function HistoryScreen() {
 
       const merged = [...current];
       sessionsQuery.data.items.forEach((item) => {
-        if (!merged.some((existing) => existing.session.id === item.session.id)) {
+        if (
+          !merged.some((existing) => existing.session.id === item.session.id)
+        ) {
           merged.push(item);
         }
       });
@@ -227,12 +238,12 @@ export function HistoryScreen() {
     setHistoryFeedback(null);
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!selectedSession || !editDraft) {
       return;
     }
 
-    replaceSessionMutation.mutate({
+    await replaceSessionMutation.mutateAsync({
       sessionId: selectedSession.id,
       startedAt: toIsoString(editDraft.startedAt),
       endedAt: editDraft.endedAt ? toIsoString(editDraft.endedAt) : null,
@@ -245,12 +256,12 @@ export function HistoryScreen() {
     });
   };
 
-  const requestDelete = () => {
+  const requestDelete = async () => {
     if (!selectedSession) {
       return;
     }
 
-    deleteSessionMutation.mutate(selectedSession.id);
+    await deleteSessionMutation.mutateAsync(selectedSession.id);
   };
 
   return (
@@ -259,7 +270,9 @@ export function HistoryScreen() {
         <Card className="ft-panel p-6">
           <CardHeader>
             <CardDescription>History</CardDescription>
-            <CardTitle>Review, correct and export your past sessions.</CardTitle>
+            <CardTitle>
+              Review, correct and export your past sessions.
+            </CardTitle>
           </CardHeader>
 
           <CardContent className="grid gap-4">
@@ -438,7 +451,9 @@ export function HistoryScreen() {
             </div>
 
             {historyFeedback ? (
-              <p className="text-sm text-[var(--color-text)]">{historyFeedback}</p>
+              <p className="text-sm text-[var(--color-text)]">
+                {historyFeedback}
+              </p>
             ) : null}
             {sessionsQuery.isError ? (
               <p className="text-sm text-[var(--color-danger)]">
@@ -457,7 +472,9 @@ export function HistoryScreen() {
 
             <CardContent className="space-y-3">
               {sessionsQuery.isLoading && items.length === 0 ? (
-                <p className="ft-text-muted text-sm">Loading session history...</p>
+                <p className="ft-text-muted text-sm">
+                  Loading session history...
+                </p>
               ) : null}
 
               {!sessionsQuery.isLoading && items.length === 0 ? (
@@ -502,7 +519,8 @@ export function HistoryScreen() {
               <FilterRecapItem
                 label="Duration"
                 value={
-                  appliedFilters.minDurationSeconds || appliedFilters.maxDurationSeconds
+                  appliedFilters.minDurationSeconds ||
+                  appliedFilters.maxDurationSeconds
                     ? `${formatOptionalMinutes(appliedFilters.minDurationSeconds)} to ${formatOptionalMinutes(appliedFilters.maxDurationSeconds)}`
                     : "Any duration"
                 }
@@ -523,9 +541,10 @@ export function HistoryScreen() {
                 label="Tracked app"
                 value={
                   appliedFilters.trackedAppId
-                    ? trackedAppsQuery.data?.find(
-                        (trackedApp) => trackedApp.id === appliedFilters.trackedAppId,
-                      )?.name ?? `#${appliedFilters.trackedAppId}`
+                    ? (trackedAppsQuery.data?.find(
+                        (trackedApp) =>
+                          trackedApp.id === appliedFilters.trackedAppId,
+                      )?.name ?? `#${appliedFilters.trackedAppId}`)
                     : "Any app"
                 }
               />
@@ -546,7 +565,9 @@ export function HistoryScreen() {
           </DialogHeader>
 
           {detailQuery.isLoading ? (
-            <p className="ft-text-muted mt-5 text-sm">Loading session detail...</p>
+            <p className="ft-text-muted mt-5 text-sm">
+              Loading session detail...
+            </p>
           ) : null}
 
           {detailQuery.isError ? (
@@ -567,15 +588,21 @@ export function HistoryScreen() {
                 <div className="grid gap-3 md:grid-cols-4">
                   <MetricCard
                     label="Total duration"
-                    value={formatDurationWords(selectedDetail.totalDurationSeconds)}
+                    value={formatDurationWords(
+                      selectedDetail.totalDurationSeconds,
+                    )}
                   />
                   <MetricCard
                     label="Focus"
-                    value={formatDurationWords(selectedDetail.session.actualFocusSeconds)}
+                    value={formatDurationWords(
+                      selectedDetail.session.actualFocusSeconds,
+                    )}
                   />
                   <MetricCard
                     label="Break"
-                    value={formatDurationWords(selectedDetail.session.breakSeconds)}
+                    value={formatDurationWords(
+                      selectedDetail.session.breakSeconds,
+                    )}
                   />
                   <MetricCard
                     label="Interruptions"
@@ -773,7 +800,10 @@ export function HistoryScreen() {
                           onChange={(event) =>
                             setEditDraft((current) =>
                               current
-                                ? { ...current, breakMinutes: event.target.value }
+                                ? {
+                                    ...current,
+                                    breakMinutes: event.target.value,
+                                  }
                                 : current,
                             )
                           }
@@ -788,7 +818,10 @@ export function HistoryScreen() {
                           onChange={(event) =>
                             setEditDraft((current) =>
                               current
-                                ? { ...current, presetLabel: event.target.value }
+                                ? {
+                                    ...current,
+                                    presetLabel: event.target.value,
+                                  }
                                 : current,
                             )
                           }
@@ -797,12 +830,17 @@ export function HistoryScreen() {
                         />
                       </Field>
 
-                      <Field className="md:col-span-2 xl:col-span-4" label="Note">
+                      <Field
+                        className="md:col-span-2 xl:col-span-4"
+                        label="Note"
+                      >
                         <textarea
                           className={`${inputClassName} min-h-28 resize-y py-3`}
                           onChange={(event) =>
                             setEditDraft((current) =>
-                              current ? { ...current, note: event.target.value } : current,
+                              current
+                                ? { ...current, note: event.target.value }
+                                : current,
                             )
                           }
                           placeholder="Optional note"
@@ -814,14 +852,18 @@ export function HistoryScreen() {
                     <div className="mt-5 flex flex-wrap gap-3">
                       <Button
                         disabled={replaceSessionMutation.isPending}
-                        onClick={saveEdit}
+                        onClick={() => {
+                          void saveEdit();
+                        }}
                       >
                         Save changes
                       </Button>
                       <Button
                         className="text-[var(--color-danger)]"
                         disabled={deleteSessionMutation.isPending}
-                        onClick={requestDelete}
+                        onClick={() => {
+                          void requestDelete();
+                        }}
                         variant="ghost"
                       >
                         Delete session
@@ -834,7 +876,10 @@ export function HistoryScreen() {
               <TabsContent className="mt-5 space-y-3" value="segments">
                 {selectedDetail.segments.length ? (
                   selectedDetail.segments.map((segmentDetail) => (
-                    <SegmentRow key={segmentDetail.segment.id} segmentDetail={segmentDetail} />
+                    <SegmentRow
+                      key={segmentDetail.segment.id}
+                      segmentDetail={segmentDetail}
+                    />
                   ))
                 ) : (
                   <p className="ft-text-muted text-sm">
@@ -915,7 +960,9 @@ function SessionRow({
             {item.session.presetLabel ?? "Custom session"}
           </p>
           <p className="ft-text-muted text-sm">
-            {item.session.note ? shorten(item.session.note, 88) : "No note saved."}
+            {item.session.note
+              ? shorten(item.session.note, 88)
+              : "No note saved."}
           </p>
         </div>
 
@@ -939,7 +986,8 @@ function SessionRow({
               className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs"
               key={trackedApp.trackedAppId}
             >
-              {trackedApp.name} · {formatDurationCompact(trackedApp.durationSeconds)}
+              {trackedApp.name} ·{" "}
+              {formatDurationCompact(trackedApp.durationSeconds)}
             </span>
           ))
         ) : (
@@ -953,7 +1001,9 @@ function SessionRow({
 function EmptyState() {
   return (
     <div className="ft-panel-muted rounded-[1.25rem] px-5 py-8 text-center">
-      <p className="text-base font-medium">No session matches the current filters.</p>
+      <p className="text-base font-medium">
+        No session matches the current filters.
+      </p>
       <p className="ft-text-muted mt-2 text-sm">
         Try widening the date range, clearing the app filter, or reviewing a
         different preset.
@@ -965,7 +1015,9 @@ function EmptyState() {
 function FilterRecapItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="ft-panel-muted rounded-[1rem] px-4 py-3">
-      <p className="ft-text-muted text-xs uppercase tracking-[0.18em]">{label}</p>
+      <p className="ft-text-muted text-xs uppercase tracking-[0.18em]">
+        {label}
+      </p>
       <p className="mt-2 text-sm">{value}</p>
     </div>
   );
@@ -980,7 +1032,11 @@ function SummaryLine({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SegmentRow({ segmentDetail }: { segmentDetail: SessionSegmentDetail }) {
+function SegmentRow({
+  segmentDetail,
+}: {
+  segmentDetail: SessionSegmentDetail;
+}) {
   return (
     <div className="ft-panel-muted rounded-[1rem] px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1018,7 +1074,9 @@ function TrackedEventRow({ event }: { event: TrackedWindowEvent }) {
     <div className="ft-panel-muted rounded-[1rem] px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium">{event.appName ?? "Unknown app"}</p>
+          <p className="text-sm font-medium">
+            {event.appName ?? "Unknown app"}
+          </p>
           <p className="ft-text-muted mt-1 text-xs">
             {event.windowTitle ?? "No title"}
           </p>
@@ -1064,7 +1122,9 @@ function buildEditDraft(detail: HistorySessionDetail): EditDraft {
       ? toDateTimeLocalValue(detail.session.endedAt)
       : "",
     plannedFocusMinutes: String(detail.session.plannedFocusMinutes),
-    actualFocusMinutes: String(Math.round(detail.session.actualFocusSeconds / 60)),
+    actualFocusMinutes: String(
+      Math.round(detail.session.actualFocusSeconds / 60),
+    ),
     breakMinutes: String(Math.round(detail.session.breakSeconds / 60)),
     status: detail.session.status,
     presetLabel: detail.session.presetLabel ?? "",
@@ -1082,10 +1142,14 @@ function normalizeFilters(draft: FilterDraft): SessionHistoryFilters {
     filters.dateTo = draft.dateTo;
   }
   if (draft.minDurationMinutes) {
-    filters.minDurationSeconds = parseMinutesToSeconds(draft.minDurationMinutes);
+    filters.minDurationSeconds = parseMinutesToSeconds(
+      draft.minDurationMinutes,
+    );
   }
   if (draft.maxDurationMinutes) {
-    filters.maxDurationSeconds = parseMinutesToSeconds(draft.maxDurationMinutes);
+    filters.maxDurationSeconds = parseMinutesToSeconds(
+      draft.maxDurationMinutes,
+    );
   }
   if (draft.presetLabel.trim()) {
     filters.presetLabel = draft.presetLabel.trim();
@@ -1101,7 +1165,9 @@ function normalizeFilters(draft: FilterDraft): SessionHistoryFilters {
 }
 
 function hasFilters(filters: SessionHistoryFilters) {
-  return Object.values(filters).some((value) => value !== undefined && value !== null);
+  return Object.values(filters).some(
+    (value) => value !== undefined && value !== null,
+  );
 }
 
 function parseMinutesToSeconds(value: string) {

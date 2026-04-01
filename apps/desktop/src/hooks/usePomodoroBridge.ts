@@ -1,7 +1,7 @@
-import { listen } from "@tauri-apps/api/event";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useEffectEvent } from "react";
 
+import { desktopListen } from "../lib/desktop-api";
 import {
   getPomodoroState,
   POMODORO_STATE_EVENT,
@@ -43,12 +43,15 @@ export function usePomodoroBridge() {
 
     async function attach() {
       try {
-        unlistenState = await listen<PomodoroEvent>(POMODORO_STATE_EVENT, (event) => {
-          if (active) {
-            syncSnapshot(event.payload);
-          }
-        });
-        unlistenTransition = await listen<PomodoroTransition>(
+        unlistenState = await desktopListen<PomodoroEvent>(
+          POMODORO_STATE_EVENT,
+          (event) => {
+            if (active) {
+              syncSnapshot(event.payload);
+            }
+          },
+        );
+        unlistenTransition = await desktopListen<PomodoroTransition>(
           POMODORO_TRANSITION_EVENT,
           (event) => {
             if (active) {

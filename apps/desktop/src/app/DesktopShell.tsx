@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
@@ -10,10 +11,10 @@ export interface ShellRouteItem {
 }
 
 interface DesktopShellProps {
-  actions?: React.ReactNode;
+  actions?: ReactNode;
   description: string;
   eyebrow: string;
-  children: React.ReactNode;
+  children: ReactNode;
   routes: ShellRouteItem[];
   title: string;
 }

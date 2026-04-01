@@ -22,8 +22,9 @@ Le socle applicatif est en place et les epics suivants sont deja livres :
 - historique des sessions
 - dashboard de stats
 - gamification legere
+- preferences, fiabilite et packaging beta
 
-Les prochains chantiers majeurs concernent les preferences avancees, la fiabilite globale et le packaging beta.
+Les prochains chantiers majeurs concernent la stabilisation de la beta partageable, la signature reelle des bundles et les iterations produit post-v0.1.
 
 ## Stack retenue
 

@@ -640,8 +640,12 @@ impl PreferencesRepository {
               tracking_permission_granted,
               tracking_onboarding_completed,
               notifications_enabled,
+              sound_enabled,
               weekly_focus_goal_minutes,
               weekly_completed_sessions_goal,
+              launch_on_startup,
+              tray_enabled,
+              close_to_tray,
               theme,
               updated_at
             FROM user_preferences
@@ -672,8 +676,12 @@ impl PreferencesRepository {
               tracking_permission_granted = ?,
               tracking_onboarding_completed = ?,
               notifications_enabled = ?,
+              sound_enabled = ?,
               weekly_focus_goal_minutes = ?,
               weekly_completed_sessions_goal = ?,
+              launch_on_startup = ?,
+              tray_enabled = ?,
+              close_to_tray = ?,
               theme = ?,
               updated_at = ?
             WHERE id = 1
@@ -689,8 +697,12 @@ impl PreferencesRepository {
         .bind(preferences.tracking_permission_granted)
         .bind(preferences.tracking_onboarding_completed)
         .bind(preferences.notifications_enabled)
+        .bind(preferences.sound_enabled)
         .bind(preferences.weekly_focus_goal_minutes)
         .bind(preferences.weekly_completed_sessions_goal)
+        .bind(preferences.launch_on_startup)
+        .bind(preferences.tray_enabled)
+        .bind(preferences.close_to_tray)
         .bind(preferences.theme.as_str())
         .bind(Utc::now().to_rfc3339())
         .execute(&self.pool)
@@ -858,6 +870,29 @@ impl DailyStatRepository {
         Self { pool }
     }
 
+    pub async fn list_all(&self) -> Result<Vec<DailyStat>, PersistenceError> {
+        let rows = sqlx::query_as::<_, DailyStatRow>(
+            r#"
+            SELECT
+              stat_date,
+              focus_seconds,
+              break_seconds,
+              completed_sessions,
+              interrupted_sessions,
+              top_app_id,
+              updated_at
+            FROM daily_stats
+            ORDER BY stat_date ASC
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.into_iter()
+            .map(DailyStatRow::try_into_domain)
+            .collect()
+    }
+
     pub async fn list(&self, limit: u32) -> Result<Vec<DailyStat>, PersistenceError> {
         let rows = sqlx::query_as::<_, DailyStatRow>(
             r#"
@@ -1012,6 +1047,36 @@ impl AchievementRepository {
 impl TrackingRepository {
     pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
+    }
+
+    pub async fn list_all_window_events(
+        &self,
+    ) -> Result<Vec<TrackedWindowEvent>, PersistenceError> {
+        let rows = sqlx::query_as::<_, TrackedWindowEventRow>(
+            r#"
+            SELECT
+              tracked_window_events.id,
+              tracked_window_events.session_id,
+              tracked_window_events.tracked_app_id,
+              tracked_apps.name AS app_name,
+              tracked_apps.executable,
+              tracked_apps.category,
+              tracked_window_events.window_title,
+              tracked_window_events.started_at,
+              tracked_window_events.ended_at,
+              tracked_window_events.created_at
+            FROM tracked_window_events
+            LEFT JOIN tracked_apps
+              ON tracked_apps.id = tracked_window_events.tracked_app_id
+            ORDER BY tracked_window_events.started_at ASC
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.into_iter()
+            .map(TrackedWindowEventRow::try_into_domain)
+            .collect()
     }
 
     pub async fn list_window_events(
@@ -1448,8 +1513,12 @@ struct UserPreferenceRow {
     tracking_permission_granted: bool,
     tracking_onboarding_completed: bool,
     notifications_enabled: bool,
+    sound_enabled: bool,
     weekly_focus_goal_minutes: i32,
     weekly_completed_sessions_goal: i32,
+    launch_on_startup: bool,
+    tray_enabled: bool,
+    close_to_tray: bool,
     theme: String,
     updated_at: String,
 }
@@ -1467,8 +1536,12 @@ impl UserPreferenceRow {
             tracking_permission_granted: self.tracking_permission_granted,
             tracking_onboarding_completed: self.tracking_onboarding_completed,
             notifications_enabled: self.notifications_enabled,
+            sound_enabled: self.sound_enabled,
             weekly_focus_goal_minutes: self.weekly_focus_goal_minutes,
             weekly_completed_sessions_goal: self.weekly_completed_sessions_goal,
+            launch_on_startup: self.launch_on_startup,
+            tray_enabled: self.tray_enabled,
+            close_to_tray: self.close_to_tray,
             theme: parse_theme_preference(&self.theme)?,
             updated_at: parse_datetime(&self.updated_at)?,
         })

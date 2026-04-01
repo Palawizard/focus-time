@@ -51,7 +51,8 @@ const categoryLabels: Record<TrackingCategory, string> = {
 
 export function TrackerScreen() {
   const queryClient = useQueryClient();
-  const [ruleKind, setRuleKind] = useState<TrackingExclusionKind>("window_title");
+  const [ruleKind, setRuleKind] =
+    useState<TrackingExclusionKind>("window_title");
   const [rulePattern, setRulePattern] = useState("");
 
   const trackingStatus = useQuery({
@@ -125,7 +126,9 @@ export function TrackerScreen() {
     !runtime?.permissionGranted || !runtime?.onboardingCompleted;
   const canCreateRule = rulePattern.trim().length > 0;
 
-  const updatePreferences = (mutate: (draft: Omit<UserPreference, "updatedAt">) => void) => {
+  const updatePreferences = (
+    mutate: (draft: Omit<UserPreference, "updatedAt">) => void,
+  ) => {
     if (!currentPreferences) {
       return;
     }
@@ -139,8 +142,16 @@ export function TrackerScreen() {
       autoStartFocus: currentPreferences.autoStartFocus,
       trackingEnabled: currentPreferences.trackingEnabled,
       trackingPermissionGranted: currentPreferences.trackingPermissionGranted,
-      trackingOnboardingCompleted: currentPreferences.trackingOnboardingCompleted,
+      trackingOnboardingCompleted:
+        currentPreferences.trackingOnboardingCompleted,
       notificationsEnabled: currentPreferences.notificationsEnabled,
+      soundEnabled: currentPreferences.soundEnabled,
+      weeklyFocusGoalMinutes: currentPreferences.weeklyFocusGoalMinutes,
+      weeklyCompletedSessionsGoal:
+        currentPreferences.weeklyCompletedSessionsGoal,
+      launchOnStartup: currentPreferences.launchOnStartup,
+      trayEnabled: currentPreferences.trayEnabled,
+      closeToTray: currentPreferences.closeToTray,
       theme: currentPreferences.theme,
     };
 
@@ -175,10 +186,7 @@ export function TrackerScreen() {
                 label="Mode"
                 value={runtime ? formatMode(runtime.status.mode) : "Loading"}
               />
-              <MetricCard
-                label="Top app"
-                value={topApp ?? "No activity yet"}
-              />
+              <MetricCard label="Top app" value={topApp ?? "No activity yet"} />
               <MetricCard
                 label="Exclusions"
                 value={`${excludedAppsCount} app${excludedAppsCount === 1 ? "" : "s"}`}
@@ -221,7 +229,9 @@ export function TrackerScreen() {
                     onClick={handleToggleTracking}
                     variant={runtime?.trackingEnabled ? "secondary" : "default"}
                   >
-                    {runtime?.trackingEnabled ? "Pause tracking" : "Resume tracking"}
+                    {runtime?.trackingEnabled
+                      ? "Pause tracking"
+                      : "Resume tracking"}
                   </Button>
                 )}
               </div>
@@ -234,8 +244,9 @@ export function TrackerScreen() {
                   Tracking stays off until you explicitly enable it.
                 </CardTitle>
                 <p className="ft-text-muted mt-3 text-sm">
-                  Focus Time keeps everything local. Enabling tracking lets the app
-                  watch the active window only while a focus session is running.
+                  Focus Time keeps everything local. Enabling tracking lets the
+                  app watch the active window only while a focus session is
+                  running.
                 </p>
               </Card>
             ) : null}
@@ -385,8 +396,8 @@ export function TrackerScreen() {
                 ))
               ) : (
                 <p className="ft-text-muted text-sm">
-                  No rule yet. Add one to keep personal apps or window titles out
-                  of your timeline.
+                  No rule yet. Add one to keep personal apps or window titles
+                  out of your timeline.
                 </p>
               )}
             </div>
@@ -430,9 +441,12 @@ function RecentEventRow({ event }: { event: TrackedWindowEvent }) {
     <div className="ft-panel-muted px-4 py-3">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-medium">{event.appName ?? "Unknown app"}</p>
+          <p className="text-sm font-medium">
+            {event.appName ?? "Unknown app"}
+          </p>
           <p className="ft-text-muted mt-1 text-xs">
-            {event.windowTitle ?? "No title"} · {formatTimeRange(event.startedAt, event.endedAt)}
+            {event.windowTitle ?? "No title"} ·{" "}
+            {formatTimeRange(event.startedAt, event.endedAt)}
           </p>
         </div>
         <span className="ft-brand-badge rounded-full px-3 py-1 text-xs font-medium">
@@ -455,7 +469,10 @@ function pickTopApp(events: TrackedWindowEvent[]): string | null {
     const endedAt = event.endedAt ? Date.parse(event.endedAt) : startedAt;
     const duration = Math.max(0, endedAt - startedAt);
 
-    durations.set(event.appName, (durations.get(event.appName) ?? 0) + duration);
+    durations.set(
+      event.appName,
+      (durations.get(event.appName) ?? 0) + duration,
+    );
   });
 
   let winner: string | null = null;

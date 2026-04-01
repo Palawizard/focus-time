@@ -7,6 +7,7 @@ interface ThemeStore {
   mode: ThemeMode;
   resolvedTheme: ResolvedTheme;
   setMode: (mode: ThemeMode) => void;
+  hydrateMode: (mode: ThemeMode) => void;
   setResolvedTheme: (theme: ResolvedTheme) => void;
 }
 
@@ -19,7 +20,9 @@ function getStoredThemeMode(): ThemeMode {
 
   const storedMode = window.localStorage.getItem(STORAGE_KEY);
 
-  return storedMode === "dark" || storedMode === "light" || storedMode === "system"
+  return storedMode === "dark" ||
+    storedMode === "light" ||
+    storedMode === "system"
     ? storedMode
     : "system";
 }
@@ -34,5 +37,6 @@ export const useThemeStore = create<ThemeStore>((set) => ({
 
     set({ mode });
   },
+  hydrateMode: (mode) => set({ mode }),
   setResolvedTheme: (resolvedTheme) => set({ resolvedTheme }),
 }));

@@ -10,9 +10,9 @@ use serde::Deserialize;
 use tauri::Manager;
 
 use crate::services::{
-    HistoryExportFormat, HistoryExportResult, HistoryFiltersInput, HistorySessionDetail,
-    HistorySessionsPage, ReplaceSessionDetailsInput, StatsDashboard, StatsPeriod,
-    TrackingRuntimeSnapshot,
+    BackupArchiveSummary, HistoryExportFormat, HistoryExportResult, HistoryFiltersInput,
+    HistorySessionDetail, HistorySessionsPage, ReplaceSessionDetailsInput, StatsDashboard,
+    StatsPeriod, TrackingRuntimeSnapshot,
 };
 use crate::state::AppState;
 
@@ -50,8 +50,12 @@ pub struct SaveUserPreferencesRequest {
     pub tracking_permission_granted: bool,
     pub tracking_onboarding_completed: bool,
     pub notifications_enabled: bool,
+    pub sound_enabled: bool,
     pub weekly_focus_goal_minutes: i32,
     pub weekly_completed_sessions_goal: i32,
+    pub launch_on_startup: bool,
+    pub tray_enabled: bool,
+    pub close_to_tray: bool,
     pub theme: String,
 }
 
@@ -122,6 +126,12 @@ pub struct ReplaceSessionRequest {
 pub struct ExportHistoryRequest {
     pub format: String,
     pub filters: Option<SessionHistoryFiltersRequest>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RestoreLocalBackupRequest {
+    pub path: String,
 }
 
 #[tauri::command]
@@ -293,6 +303,7 @@ pub async fn get_user_preferences(
 
 #[tauri::command]
 pub async fn save_user_preferences(
+    app_handle: tauri::AppHandle,
     state: tauri::State<'_, AppState>,
     request: SaveUserPreferencesRequest,
 ) -> Result<UserPreference, String> {
@@ -313,17 +324,75 @@ pub async fn save_user_preferences(
         tracking_permission_granted: request.tracking_permission_granted,
         tracking_onboarding_completed: request.tracking_onboarding_completed,
         notifications_enabled: request.notifications_enabled,
+        sound_enabled: request.sound_enabled,
         weekly_focus_goal_minutes: request.weekly_focus_goal_minutes,
         weekly_completed_sessions_goal: request.weekly_completed_sessions_goal,
+        launch_on_startup: request.launch_on_startup,
+        tray_enabled: request.tray_enabled,
+        close_to_tray: request.close_to_tray,
         theme: parse_theme(&request.theme)?,
         updated_at: current.updated_at,
     };
 
-    state
+    let saved_preferences = state
         .storage
         .save_user_preferences(&preferences)
         .await
+        .map_err(|error| error.to_string())?;
+
+    state
+        .runtime
+        .apply_user_preferences(&app_handle, &saved_preferences)
+        .map_err(|error| error.to_string())?;
+
+    Ok(saved_preferences)
+}
+
+#[tauri::command]
+pub async fn create_local_backup(
+    state: tauri::State<'_, AppState>,
+) -> Result<BackupArchiveSummary, String> {
+    state
+        .storage
+        .create_backup(state.runtime.backup_dir().to_path_buf())
+        .await
         .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn list_local_backups(
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<BackupArchiveSummary>, String> {
+    state
+        .storage
+        .list_backups(state.runtime.backup_dir().to_path_buf())
+        .await
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn restore_local_backup(
+    app_handle: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    request: RestoreLocalBackupRequest,
+) -> Result<BackupArchiveSummary, String> {
+    let summary = state
+        .storage
+        .restore_backup(request.path.into())
+        .await
+        .map_err(|error| error.to_string())?;
+    let preferences = state
+        .storage
+        .get_user_preferences()
+        .await
+        .map_err(|error| error.to_string())?;
+
+    state
+        .runtime
+        .apply_user_preferences(&app_handle, &preferences)
+        .map_err(|error| error.to_string())?;
+
+    Ok(summary)
 }
 
 #[tauri::command]

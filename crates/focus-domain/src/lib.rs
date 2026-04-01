@@ -33,6 +33,7 @@ mod tests {
 
         assert_eq!(preferences.focus_minutes, 25);
         assert_eq!(preferences.weekly_focus_goal_minutes, 240);
+        assert!(preferences.tray_enabled);
         assert_eq!(preferences.theme, ThemePreference::System);
     }
 

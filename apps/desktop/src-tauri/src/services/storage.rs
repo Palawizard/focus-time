@@ -5,11 +5,11 @@ use std::{
 };
 
 use anyhow::Context;
-use chrono::{NaiveDate, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use focus_domain::{
-    build_gamification_overview, BuildGamificationOverviewInput, DailyStat, GamificationOverview,
-    Session, SessionSegment, SessionStatus, TrackedApp, TrackedWindowEvent, TrackingCategory,
-    TrackingExclusionKind, TrackingExclusionRule, UserPreference,
+    build_gamification_overview, Achievement, BuildGamificationOverviewInput, DailyStat,
+    GamificationOverview, Session, SessionSegment, SessionStatus, TrackedApp, TrackedWindowEvent,
+    TrackingCategory, TrackingExclusionKind, TrackingExclusionRule, UserPreference,
 };
 use focus_persistence::{
     connect_database, run_migrations, seed_development_data, CreateSessionInput,
@@ -19,7 +19,7 @@ use focus_persistence::{
     UpsertTrackedAppInput,
 };
 use focus_stats::{BuildDashboardInput, StatsDashboard, StatsPeriod};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 
 #[derive(Debug, Clone)]
@@ -89,8 +89,8 @@ pub struct HistorySessionDetail {
 #[derive(Debug, Clone)]
 pub struct ReplaceSessionDetailsInput {
     pub session_id: i64,
-    pub started_at: chrono::DateTime<Utc>,
-    pub ended_at: Option<chrono::DateTime<Utc>>,
+    pub started_at: DateTime<Utc>,
+    pub ended_at: Option<DateTime<Utc>>,
     pub planned_focus_minutes: i32,
     pub actual_focus_seconds: i64,
     pub break_seconds: i64,
@@ -111,6 +111,37 @@ pub struct HistoryExportResult {
     pub path: String,
     pub format: &'static str,
     pub sessions_exported: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackupArchiveSummary {
+    pub file_name: String,
+    pub path: String,
+    pub created_at: DateTime<Utc>,
+    pub size_bytes: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct BackupArchive {
+    format_version: u32,
+    created_at: DateTime<Utc>,
+    schema_version: u32,
+    payload: BackupPayload,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct BackupPayload {
+    user_preferences: UserPreference,
+    sessions: Vec<Session>,
+    session_segments: Vec<SessionSegment>,
+    tracked_apps: Vec<TrackedApp>,
+    tracked_window_events: Vec<TrackedWindowEvent>,
+    tracking_exclusion_rules: Vec<TrackingExclusionRule>,
+    daily_stats: Vec<DailyStat>,
+    achievements: Vec<Achievement>,
 }
 
 impl StorageService {
@@ -218,7 +249,7 @@ impl StorageService {
     pub async fn update_session(
         &self,
         session_id: i64,
-        ended_at: chrono::DateTime<Utc>,
+        ended_at: DateTime<Utc>,
         actual_focus_seconds: i64,
         break_seconds: i64,
         status: SessionStatus,
@@ -374,8 +405,8 @@ impl StorageService {
         session_id: Option<i64>,
         tracked_app_id: Option<i64>,
         window_title: Option<String>,
-        started_at: chrono::DateTime<Utc>,
-        ended_at: Option<chrono::DateTime<Utc>>,
+        started_at: DateTime<Utc>,
+        ended_at: Option<DateTime<Utc>>,
     ) -> anyhow::Result<TrackedWindowEvent> {
         self.repositories
             .tracking
@@ -584,6 +615,360 @@ impl StorageService {
         })
     }
 
+    pub async fn create_backup(
+        &self,
+        backup_root: PathBuf,
+    ) -> anyhow::Result<BackupArchiveSummary> {
+        fs::create_dir_all(&backup_root)?;
+
+        let preferences = self.repositories.preferences.get().await?;
+        let sessions = self
+            .repositories
+            .sessions
+            .list_filtered(ListSessionsPageInput {
+                limit: None,
+                offset: 0,
+                filters: SessionHistoryFiltersInput::default(),
+            })
+            .await?;
+        let session_ids = sessions
+            .iter()
+            .map(|session| session.id)
+            .collect::<Vec<_>>();
+        let session_segments = self
+            .repositories
+            .sessions
+            .list_segments_for_sessions(&session_ids)
+            .await?;
+        let tracked_apps = self.repositories.tracked_apps.list().await?;
+        let tracked_window_events = self.repositories.tracking.list_all_window_events().await?;
+        let tracking_exclusion_rules = self.repositories.tracking.list_exclusion_rules().await?;
+        let daily_stats = self.repositories.daily_stats.list_all().await?;
+        let achievements = self.repositories.achievements.list().await?;
+
+        let archive = BackupArchive {
+            format_version: 1,
+            created_at: Utc::now(),
+            schema_version: focus_persistence::storage_profile().schema_version,
+            payload: BackupPayload {
+                user_preferences: preferences,
+                sessions,
+                session_segments,
+                tracked_apps,
+                tracked_window_events,
+                tracking_exclusion_rules,
+                daily_stats,
+                achievements,
+            },
+        };
+        let file_name = format!(
+            "focus-time-backup-{}.json",
+            archive.created_at.format("%Y%m%d-%H%M%S")
+        );
+        let path = backup_root.join(file_name);
+        fs::write(&path, serde_json::to_string_pretty(&archive)?)?;
+        log::info!("Created local backup at {}", path.display());
+
+        summarize_backup_file(&path)
+    }
+
+    pub async fn list_backups(
+        &self,
+        backup_root: PathBuf,
+    ) -> anyhow::Result<Vec<BackupArchiveSummary>> {
+        fs::create_dir_all(&backup_root)?;
+        let mut backups = fs::read_dir(&backup_root)?
+            .filter_map(|entry| entry.ok())
+            .map(|entry| entry.path())
+            .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("json"))
+            .filter_map(|path| summarize_backup_file(&path).ok())
+            .collect::<Vec<_>>();
+
+        backups.sort_by(|left, right| right.created_at.cmp(&left.created_at));
+
+        Ok(backups)
+    }
+
+    pub async fn restore_backup(
+        &self,
+        backup_path: PathBuf,
+    ) -> anyhow::Result<BackupArchiveSummary> {
+        let archive = read_backup_archive(&backup_path)?;
+        let mut transaction = self.pool.begin().await?;
+
+        sqlx::query("DELETE FROM tracked_window_events")
+            .execute(&mut *transaction)
+            .await?;
+        sqlx::query("DELETE FROM session_segments")
+            .execute(&mut *transaction)
+            .await?;
+        sqlx::query("DELETE FROM daily_stats")
+            .execute(&mut *transaction)
+            .await?;
+        sqlx::query("DELETE FROM tracking_exclusion_rules")
+            .execute(&mut *transaction)
+            .await?;
+        sqlx::query("DELETE FROM achievements")
+            .execute(&mut *transaction)
+            .await?;
+        sqlx::query("DELETE FROM tracked_apps")
+            .execute(&mut *transaction)
+            .await?;
+        sqlx::query("DELETE FROM sessions")
+            .execute(&mut *transaction)
+            .await?;
+
+        sqlx::query(
+            r#"
+            UPDATE user_preferences
+            SET
+              focus_minutes = ?,
+              short_break_minutes = ?,
+              long_break_minutes = ?,
+              sessions_until_long_break = ?,
+              auto_start_breaks = ?,
+              auto_start_focus = ?,
+              tracking_enabled = ?,
+              tracking_permission_granted = ?,
+              tracking_onboarding_completed = ?,
+              notifications_enabled = ?,
+              sound_enabled = ?,
+              weekly_focus_goal_minutes = ?,
+              weekly_completed_sessions_goal = ?,
+              launch_on_startup = ?,
+              tray_enabled = ?,
+              close_to_tray = ?,
+              theme = ?,
+              updated_at = ?
+            WHERE id = 1
+            "#,
+        )
+        .bind(archive.payload.user_preferences.focus_minutes)
+        .bind(archive.payload.user_preferences.short_break_minutes)
+        .bind(archive.payload.user_preferences.long_break_minutes)
+        .bind(archive.payload.user_preferences.sessions_until_long_break)
+        .bind(archive.payload.user_preferences.auto_start_breaks)
+        .bind(archive.payload.user_preferences.auto_start_focus)
+        .bind(archive.payload.user_preferences.tracking_enabled)
+        .bind(archive.payload.user_preferences.tracking_permission_granted)
+        .bind(
+            archive
+                .payload
+                .user_preferences
+                .tracking_onboarding_completed,
+        )
+        .bind(archive.payload.user_preferences.notifications_enabled)
+        .bind(archive.payload.user_preferences.sound_enabled)
+        .bind(archive.payload.user_preferences.weekly_focus_goal_minutes)
+        .bind(
+            archive
+                .payload
+                .user_preferences
+                .weekly_completed_sessions_goal,
+        )
+        .bind(archive.payload.user_preferences.launch_on_startup)
+        .bind(archive.payload.user_preferences.tray_enabled)
+        .bind(archive.payload.user_preferences.close_to_tray)
+        .bind(archive.payload.user_preferences.theme.as_str())
+        .bind(archive.payload.user_preferences.updated_at.to_rfc3339())
+        .execute(&mut *transaction)
+        .await?;
+
+        for session in &archive.payload.sessions {
+            sqlx::query(
+                r#"
+                INSERT INTO sessions (
+                  id,
+                  started_at,
+                  ended_at,
+                  planned_focus_minutes,
+                  actual_focus_seconds,
+                  break_seconds,
+                  status,
+                  preset_label,
+                  note,
+                  created_at,
+                  updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                "#,
+            )
+            .bind(session.id)
+            .bind(session.started_at.to_rfc3339())
+            .bind(session.ended_at.map(|value| value.to_rfc3339()))
+            .bind(session.planned_focus_minutes)
+            .bind(session.actual_focus_seconds)
+            .bind(session.break_seconds)
+            .bind(session.status.as_str())
+            .bind(session.preset_label.clone())
+            .bind(session.note.clone())
+            .bind(session.created_at.to_rfc3339())
+            .bind(session.updated_at.to_rfc3339())
+            .execute(&mut *transaction)
+            .await?;
+        }
+
+        for tracked_app in &archive.payload.tracked_apps {
+            sqlx::query(
+                r#"
+                INSERT INTO tracked_apps (
+                  id,
+                  name,
+                  executable,
+                  category,
+                  color_hex,
+                  is_excluded,
+                  created_at,
+                  updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                "#,
+            )
+            .bind(tracked_app.id)
+            .bind(tracked_app.name.clone())
+            .bind(tracked_app.executable.clone())
+            .bind(tracked_app.category.as_str())
+            .bind(tracked_app.color_hex.clone())
+            .bind(tracked_app.is_excluded)
+            .bind(tracked_app.created_at.to_rfc3339())
+            .bind(tracked_app.updated_at.to_rfc3339())
+            .execute(&mut *transaction)
+            .await?;
+        }
+
+        for segment in &archive.payload.session_segments {
+            sqlx::query(
+                r#"
+                INSERT INTO session_segments (
+                  id,
+                  session_id,
+                  tracked_app_id,
+                  kind,
+                  window_title,
+                  started_at,
+                  ended_at,
+                  duration_seconds,
+                  created_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                "#,
+            )
+            .bind(segment.id)
+            .bind(segment.session_id)
+            .bind(segment.tracked_app_id)
+            .bind(segment.kind.as_str())
+            .bind(segment.window_title.clone())
+            .bind(segment.started_at.to_rfc3339())
+            .bind(segment.ended_at.to_rfc3339())
+            .bind(segment.duration_seconds)
+            .bind(segment.created_at.to_rfc3339())
+            .execute(&mut *transaction)
+            .await?;
+        }
+
+        for event in &archive.payload.tracked_window_events {
+            sqlx::query(
+                r#"
+                INSERT INTO tracked_window_events (
+                  id,
+                  session_id,
+                  tracked_app_id,
+                  window_title,
+                  started_at,
+                  ended_at,
+                  created_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                "#,
+            )
+            .bind(event.id)
+            .bind(event.session_id)
+            .bind(event.tracked_app_id)
+            .bind(event.window_title.clone())
+            .bind(event.started_at.to_rfc3339())
+            .bind(event.ended_at.map(|value| value.to_rfc3339()))
+            .bind(event.created_at.to_rfc3339())
+            .execute(&mut *transaction)
+            .await?;
+        }
+
+        for rule in &archive.payload.tracking_exclusion_rules {
+            sqlx::query(
+                r#"
+                INSERT INTO tracking_exclusion_rules (
+                  id,
+                  kind,
+                  pattern,
+                  created_at,
+                  updated_at
+                )
+                VALUES (?, ?, ?, ?, ?)
+                "#,
+            )
+            .bind(rule.id)
+            .bind(rule.kind.as_str())
+            .bind(rule.pattern.clone())
+            .bind(rule.created_at.to_rfc3339())
+            .bind(rule.updated_at.to_rfc3339())
+            .execute(&mut *transaction)
+            .await?;
+        }
+
+        for stat in &archive.payload.daily_stats {
+            sqlx::query(
+                r#"
+                INSERT INTO daily_stats (
+                  stat_date,
+                  focus_seconds,
+                  break_seconds,
+                  completed_sessions,
+                  interrupted_sessions,
+                  top_app_id,
+                  updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                "#,
+            )
+            .bind(stat.date.format("%Y-%m-%d").to_string())
+            .bind(stat.focus_seconds)
+            .bind(stat.break_seconds)
+            .bind(stat.completed_sessions)
+            .bind(stat.interrupted_sessions)
+            .bind(stat.top_app_id)
+            .bind(stat.updated_at.to_rfc3339())
+            .execute(&mut *transaction)
+            .await?;
+        }
+
+        for achievement in &archive.payload.achievements {
+            sqlx::query(
+                r#"
+                INSERT INTO achievements (
+                  id,
+                  slug,
+                  title,
+                  unlocked_at,
+                  created_at
+                )
+                VALUES (?, ?, ?, ?, ?)
+                "#,
+            )
+            .bind(achievement.id)
+            .bind(achievement.slug.clone())
+            .bind(achievement.title.clone())
+            .bind(achievement.unlocked_at.map(|value| value.to_rfc3339()))
+            .bind(achievement.created_at.to_rfc3339())
+            .execute(&mut *transaction)
+            .await?;
+        }
+
+        transaction.commit().await?;
+        self.refresh_gamification_state().await?;
+        log::info!("Restored local backup from {}", backup_path.display());
+
+        summarize_backup_file(&backup_path)
+    }
+
     async fn build_history_summaries(
         &self,
         sessions: Vec<Session>,
@@ -756,4 +1141,29 @@ fn escape_csv(value: &str) -> String {
     } else {
         escaped
     }
+}
+
+fn summarize_backup_file(path: &PathBuf) -> anyhow::Result<BackupArchiveSummary> {
+    let archive = read_backup_archive(path)?;
+    let metadata = fs::metadata(path)?;
+
+    Ok(BackupArchiveSummary {
+        file_name: path
+            .file_name()
+            .and_then(|value| value.to_str())
+            .context("backup file name should be valid unicode")?
+            .to_string(),
+        path: path.display().to_string(),
+        created_at: archive.created_at,
+        size_bytes: metadata.len(),
+    })
+}
+
+fn read_backup_archive(path: &PathBuf) -> anyhow::Result<BackupArchive> {
+    let contents = fs::read_to_string(path)
+        .with_context(|| format!("failed to read backup archive at {}", path.display()))?;
+    let archive = serde_json::from_str::<BackupArchive>(&contents)
+        .with_context(|| format!("failed to parse backup archive at {}", path.display()))?;
+
+    Ok(archive)
 }

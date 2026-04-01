@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
     "composite": true,
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
     "skipLibCheck": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
@@ -8,5 +10,11 @@
     "strict": true,
     "types": ["node"]
   },
-  "include": ["eslint.config.js", "vite.config.ts", "vitest.config.ts"]
+  "include": [
+    "eslint.config.js",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "playwright.config.ts",
+    "e2e/**/*.ts"
+  ]
 }

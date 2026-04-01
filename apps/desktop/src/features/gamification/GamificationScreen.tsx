@@ -36,22 +36,18 @@ export function GamificationScreen() {
     queryKey: ["user-preferences"],
     queryFn: getUserPreferences,
   });
+  const preferences = preferencesQuery.data;
   const [focusGoalDraft, setFocusGoalDraft] = useState("240");
   const [sessionsGoalDraft, setSessionsGoalDraft] = useState("5");
 
   useEffect(() => {
-    if (!preferencesQuery.data) {
+    if (!preferences) {
       return;
     }
 
-    setFocusGoalDraft(String(preferencesQuery.data.weeklyFocusGoalMinutes));
-    setSessionsGoalDraft(
-      String(preferencesQuery.data.weeklyCompletedSessionsGoal),
-    );
-  }, [
-    preferencesQuery.data?.weeklyCompletedSessionsGoal,
-    preferencesQuery.data?.weeklyFocusGoalMinutes,
-  ]);
+    setFocusGoalDraft(String(preferences.weeklyFocusGoalMinutes));
+    setSessionsGoalDraft(String(preferences.weeklyCompletedSessionsGoal));
+  }, [preferences]);
 
   const saveGoalsMutation = useMutation({
     mutationFn: async () => {
@@ -76,8 +72,10 @@ export function GamificationScreen() {
 
   const isDirty =
     preferencesQuery.data !== undefined &&
-    (sanitizeGoal(focusGoalDraft, preferencesQuery.data.weeklyFocusGoalMinutes) !==
-      preferencesQuery.data.weeklyFocusGoalMinutes ||
+    (sanitizeGoal(
+      focusGoalDraft,
+      preferencesQuery.data.weeklyFocusGoalMinutes,
+    ) !== preferencesQuery.data.weeklyFocusGoalMinutes ||
       sanitizeGoal(
         sessionsGoalDraft,
         preferencesQuery.data.weeklyCompletedSessionsGoal,
@@ -151,7 +149,12 @@ export function GamificationScreen() {
             <p className="ft-text-muted text-sm">
               The local runtime did not return a valid progress snapshot.
             </p>
-            <Button onClick={() => gamificationQuery.refetch()} variant="secondary">
+            <Button
+              onClick={() => {
+                void gamificationQuery.refetch();
+              }}
+              variant="secondary"
+            >
               Retry
             </Button>
           </CardContent>
@@ -261,7 +264,9 @@ function GamificationContent({
                     className={inputClassName}
                     inputMode="numeric"
                     min={1}
-                    onChange={(event) => setSessionsGoalDraft(event.target.value)}
+                    onChange={(event) =>
+                      setSessionsGoalDraft(event.target.value)
+                    }
                     step={1}
                     type="number"
                     value={sessionsGoalDraft}
@@ -279,7 +284,9 @@ function GamificationContent({
               </div>
 
               {saveError ? (
-                <p className="text-sm text-[var(--color-danger)]">{saveError}</p>
+                <p className="text-sm text-[var(--color-danger)]">
+                  {saveError}
+                </p>
               ) : null}
             </div>
           </CardContent>
@@ -404,11 +411,7 @@ function BadgeRow({ badge }: { badge: ProgressBadge }) {
   );
 }
 
-function AchievementRow({
-  achievement,
-}: {
-  achievement: AchievementProgress;
-}) {
+function AchievementRow({ achievement }: { achievement: AchievementProgress }) {
   const isUnlocked = Boolean(achievement.unlockedAt);
 
   return (
@@ -428,7 +431,9 @@ function AchievementRow({
               {isUnlocked ? "Unlocked" : "Locked"}
             </span>
           </div>
-          <p className="ft-text-muted mt-2 text-sm">{achievement.description}</p>
+          <p className="ft-text-muted mt-2 text-sm">
+            {achievement.description}
+          </p>
         </div>
         <div className="ft-brand-badge inline-flex h-10 w-10 items-center justify-center rounded-full">
           <Trophy className="h-4 w-4" />
@@ -494,7 +499,8 @@ function sanitizeGoal(value: string, fallback: number) {
 }
 
 function stripUpdatedAt(preferences: UserPreference) {
-  const { updatedAt: _updatedAt, ...request } = preferences;
+  const request = { ...preferences };
+  Reflect.deleteProperty(request, "updatedAt");
 
   return request;
 }

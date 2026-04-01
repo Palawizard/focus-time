@@ -9,6 +9,8 @@ const MIGRATION_0003: &str =
     include_str!("../../../apps/desktop/src-tauri/migrations/0003_tracking_foundation.sql");
 const MIGRATION_0004: &str =
     include_str!("../../../apps/desktop/src-tauri/migrations/0004_gamification_foundation.sql");
+const MIGRATION_0005: &str =
+    include_str!("../../../apps/desktop/src-tauri/migrations/0005_runtime_preferences.sql");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MigrationDefinition {
@@ -29,7 +31,7 @@ pub enum MigrationError {
     Database(#[from] sqlx::Error),
 }
 
-const MIGRATIONS: [MigrationDefinition; 4] = [
+const MIGRATIONS: [MigrationDefinition; 5] = [
     MigrationDefinition {
         version: 1,
         name: "initial_schema",
@@ -49,6 +51,11 @@ const MIGRATIONS: [MigrationDefinition; 4] = [
         version: 4,
         name: "gamification_foundation",
         sql: MIGRATION_0004,
+    },
+    MigrationDefinition {
+        version: 5,
+        name: "runtime_preferences",
+        sql: MIGRATION_0005,
     },
 ];
 

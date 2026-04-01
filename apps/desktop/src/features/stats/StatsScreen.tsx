@@ -586,9 +586,8 @@ function formatPercent(value: number) {
 
 function formatCompletionDelta(comparison: StatsComparison) {
   const delta = comparison.completionRateDelta;
-  const points = `${delta >= 0 ? "+" : "-"}${Math.abs(delta * 100).toFixed(0)} pts vs previous`;
 
-  return points;
+  return `${delta >= 0 ? "+" : "-"}${Math.abs(delta * 100).toFixed(0)} pts vs previous`;
 }
 
 function formatComparisonLabel(dashboard: StatsDashboard) {

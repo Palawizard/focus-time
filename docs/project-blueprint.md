@@ -43,21 +43,32 @@ Epics restants :
 
 ## 4. Stack recommandee
 
-| Domaine | Choix | Pourquoi |
-| --- | --- | --- |
-| Shell desktop | `Tauri v2` | faible consommation memoire, integration native, bon fit pour une app locale |
-| Coeur natif | `Rust` | fiable pour les timers, performant pour le tracking, tres bon acces systeme |
-| UI | `React + TypeScript + Vite` | productivite elevee, ecosysteme mature, interface moderne |
-| State management | `Zustand` | simple, leger, adapte a une app desktop locale |
-| Data fetching local | `TanStack Query` | gestion propre des lectures et mutations asynchrones vers les commandes Tauri |
-| UI primitives | `Radix UI` | composants accessibles sans imposer un design fige |
-| Styling | `Tailwind CSS` | iteration rapide pour une UI minimaliste et coherente |
-| Graphiques | rendu maison simple ou bibliotheque legere si necessaire | eviter une dependance lourde si les besoins restent simples |
-| Base locale | `SQLite` | robuste, portable, parfaite pour une app single-user |
-| Acces DB Rust | `sqlx` | migrations propres, requetes explicites, bon support SQLite |
-| Tests front | `Vitest + React Testing Library` | rapide pour la couche UI |
-| Tests Rust | `cargo test` | naturel pour la logique de domaine et la persistance |
-| E2E desktop | `Playwright + tauri-driver` | verifie les parcours critiques de bout en bout |
+- Shell desktop : `Tauri v2`
+  faible consommation memoire, integration native, bon fit pour une app locale
+- Coeur natif : `Rust`
+  fiable pour les timers, performant pour le tracking, tres bon acces systeme
+- UI : `React + TypeScript + Vite`
+  productivite elevee, ecosysteme mature, interface moderne
+- State management : `Zustand`
+  simple, leger, adapte a une app desktop locale
+- Data fetching local : `TanStack Query`
+  gestion propre des lectures et mutations asynchrones vers les commandes Tauri
+- UI primitives : `Radix UI`
+  composants accessibles sans imposer un design fige
+- Styling : `Tailwind CSS`
+  iteration rapide pour une UI minimaliste et coherente
+- Graphiques : rendu maison simple ou bibliotheque legere si necessaire
+  eviter une dependance lourde si les besoins restent simples
+- Base locale : `SQLite`
+  robuste, portable, parfaite pour une app single-user
+- Acces DB Rust : `sqlx`
+  migrations propres, requetes explicites, bon support SQLite
+- Tests front : `Vitest + React Testing Library`
+  rapide pour la couche UI
+- Tests Rust : `cargo test`
+  naturel pour la logique de domaine et la persistance
+- E2E desktop : `Playwright + tauri-driver`
+  verifie les parcours critiques de bout en bout
 
 ## 5. Pourquoi cette stack et pas une autre
 
@@ -349,12 +360,12 @@ Definition de fini :
 
 ### Epic 8 - Preferences, fiabilite et packaging
 
-- [ ] Ajouter l'ecran Settings complet.
-- [ ] Configurer autostart, tray, notifications et comportement de fermeture.
-- [ ] Ajouter sauvegarde et restauration locale des donnees.
-- [ ] Mettre en place logs, tracing et gestion d'erreurs utilisateur.
-- [ ] Ecrire les tests E2E des parcours critiques.
-- [ ] Preparer les icones, metadata, signatures et bundles de release.
+- [x] Ajouter l'ecran Settings complet.
+- [x] Configurer autostart, tray, notifications et comportement de fermeture.
+- [x] Ajouter sauvegarde et restauration locale des donnees.
+- [x] Mettre en place logs, tracing et gestion d'erreurs utilisateur.
+- [x] Ecrire les tests E2E des parcours critiques.
+- [x] Preparer les icones, metadata, signatures et bundles de release.
 
 Definition de fini :
 

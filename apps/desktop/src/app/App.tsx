@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter } from "react-router-dom";
 
 import { AppShell } from "./AppShell";
+import { useHydrateDesktopPreferences } from "../hooks/useHydrateDesktopPreferences";
 import { usePomodoroBridge } from "../hooks/usePomodoroBridge";
 import { usePomodoroNotifications } from "../hooks/usePomodoroNotifications";
 import { useApplyTheme } from "../hooks/useApplyTheme";
@@ -9,6 +10,7 @@ import { useApplyTheme } from "../hooks/useApplyTheme";
 const queryClient = new QueryClient();
 
 function AppRoot() {
+  useHydrateDesktopPreferences();
   useApplyTheme();
   usePomodoroBridge();
   usePomodoroNotifications();
