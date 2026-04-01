@@ -77,10 +77,36 @@ vi.mock("../lib/storage", async () => {
       trackingPermissionGranted: true,
       trackingOnboardingCompleted: true,
       notificationsEnabled: true,
+      weeklyFocusGoalMinutes: 240,
+      weeklyCompletedSessionsGoal: 5,
       theme: "system",
       updatedAt: "2026-03-29T00:00:00Z",
     }),
     listSessions: vi.fn().mockResolvedValue([]),
+    getGamificationOverview: vi.fn().mockResolvedValue({
+      streak: {
+        currentDays: 0,
+        bestDays: 0,
+        todayCompleted: false,
+        lastActiveDate: null,
+        nextMilestoneDays: 3,
+        isAtRisk: false,
+      },
+      weeklyGoal: {
+        startDate: "2026-03-30",
+        endDate: "2026-04-05",
+        focusGoalMinutes: 240,
+        completedSessionsGoal: 5,
+        focusMinutesCompleted: 0,
+        completedSessions: 0,
+        focusCompletionRatio: 0,
+        sessionsCompletionRatio: 0,
+        completedGoalCount: 0,
+        isCompleted: false,
+      },
+      badges: [],
+      achievements: [],
+    }),
   };
 });
 

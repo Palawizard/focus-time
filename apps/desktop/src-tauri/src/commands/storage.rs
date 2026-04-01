@@ -1,7 +1,7 @@
 use chrono::NaiveDate;
 use focus_domain::{
-    DailyStat, Session, SessionSegment, SessionSegmentKind, SessionStatus, TrackedApp,
-    TrackedWindowEvent, TrackingCategory, TrackingExclusionKind, TrackingExclusionRule,
+    DailyStat, GamificationOverview, Session, SessionSegment, SessionSegmentKind, SessionStatus,
+    TrackedApp, TrackedWindowEvent, TrackingCategory, TrackingExclusionKind, TrackingExclusionRule,
     UserPreference,
 };
 use focus_persistence::DevelopmentSeedReport;
@@ -50,6 +50,8 @@ pub struct SaveUserPreferencesRequest {
     pub tracking_permission_granted: bool,
     pub tracking_onboarding_completed: bool,
     pub notifications_enabled: bool,
+    pub weekly_focus_goal_minutes: i32,
+    pub weekly_completed_sessions_goal: i32,
     pub theme: String,
 }
 
@@ -311,6 +313,8 @@ pub async fn save_user_preferences(
         tracking_permission_granted: request.tracking_permission_granted,
         tracking_onboarding_completed: request.tracking_onboarding_completed,
         notifications_enabled: request.notifications_enabled,
+        weekly_focus_goal_minutes: request.weekly_focus_goal_minutes,
+        weekly_completed_sessions_goal: request.weekly_completed_sessions_goal,
         theme: parse_theme(&request.theme)?,
         updated_at: current.updated_at,
     };
@@ -428,6 +432,17 @@ pub async fn get_stats_dashboard(
     state
         .storage
         .get_stats_dashboard(parse_stats_period(&period)?)
+        .await
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn get_gamification_overview(
+    state: tauri::State<'_, AppState>,
+) -> Result<GamificationOverview, String> {
+    state
+        .storage
+        .get_gamification_overview()
         .await
         .map_err(|error| error.to_string())
 }

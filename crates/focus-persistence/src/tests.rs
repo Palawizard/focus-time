@@ -1,3 +1,4 @@
+use chrono::Utc;
 use tempfile::tempdir;
 
 use crate::{
@@ -12,14 +13,14 @@ fn exposes_the_current_storage_profile() {
 
     assert_eq!(profile.engine, "sqlite");
     assert_eq!(profile.mode, "sqlite");
-    assert_eq!(profile.schema_version, 3);
+    assert_eq!(profile.schema_version, 4);
 }
 
 #[test]
 fn exposes_the_initial_schema_definition() {
     let schema = crate::initial_schema();
 
-    assert_eq!(schema.version, 3);
+    assert_eq!(schema.version, 4);
     assert_eq!(schema.tables.len(), 8);
 }
 
@@ -35,12 +36,12 @@ async fn migrates_an_empty_database() {
         .await
         .expect("migrations should run on an empty database");
 
-    assert_eq!(applied.len(), 3);
+    assert_eq!(applied.len(), 4);
 
     let applied_versions = list_applied_migrations(&pool)
         .await
         .expect("migration history should be readable");
-    assert_eq!(applied_versions.len(), 3);
+    assert_eq!(applied_versions.len(), 4);
 
     let preferences_count = sqlx::query_scalar::<_, i64>("SELECT COUNT(1) FROM user_preferences")
         .fetch_one(&pool)
@@ -83,7 +84,7 @@ async fn preserves_existing_data_when_migrations_run_again() {
     let applied_versions = list_applied_migrations(&second_pool)
         .await
         .expect("migration history should still be available");
-    assert_eq!(applied_versions.len(), 3);
+    assert_eq!(applied_versions.len(), 4);
 }
 
 #[tokio::test]
@@ -188,4 +189,40 @@ async fn deletes_history_sessions_and_cascades_segments() {
 
     assert_eq!(remaining_sessions, 1);
     assert_eq!(remaining_segments, 0);
+}
+
+#[tokio::test]
+async fn stores_weekly_goal_preferences_and_unlocks_achievements() {
+    let temp = tempdir().expect("temporary directory should be created");
+    let database_path = temp.path().join("focus-time.sqlite");
+    let pool = connect_database(&database_path)
+        .await
+        .expect("database should open");
+    run_migrations(&pool).await.expect("migrations should run");
+
+    let repositories = Repositories::new(pool.clone());
+    let preferences = repositories
+        .preferences
+        .get()
+        .await
+        .expect("preferences should load");
+
+    assert_eq!(preferences.weekly_focus_goal_minutes, 240);
+    assert_eq!(preferences.weekly_completed_sessions_goal, 5);
+
+    repositories
+        .achievements
+        .unlock("first-session", "First focused block", Utc::now())
+        .await
+        .expect("achievement unlock should succeed");
+
+    let achievements = repositories
+        .achievements
+        .list()
+        .await
+        .expect("achievements should load");
+
+    assert_eq!(achievements.len(), 1);
+    assert_eq!(achievements[0].slug, "first-session");
+    assert!(achievements[0].unlocked_at.is_some());
 }

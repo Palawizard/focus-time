@@ -234,6 +234,54 @@ export interface StatsDashboard {
   isEmpty: boolean;
 }
 
+export interface Streak {
+  currentDays: number;
+  bestDays: number;
+  todayCompleted: boolean;
+  lastActiveDate: string | null;
+  nextMilestoneDays: number;
+  isAtRisk: boolean;
+}
+
+export interface WeeklyGoalProgress {
+  startDate: string;
+  endDate: string;
+  focusGoalMinutes: number;
+  completedSessionsGoal: number;
+  focusMinutesCompleted: number;
+  completedSessions: number;
+  focusCompletionRatio: number;
+  sessionsCompletionRatio: number;
+  completedGoalCount: number;
+  isCompleted: boolean;
+}
+
+export interface ProgressBadge {
+  slug: string;
+  title: string;
+  description: string;
+  progressLabel: string;
+  progressRatio: number;
+  isUnlocked: boolean;
+}
+
+export interface AchievementProgress {
+  slug: string;
+  title: string;
+  description: string;
+  progressCurrent: number;
+  progressTarget: number;
+  progressRatio: number;
+  unlockedAt: string | null;
+}
+
+export interface GamificationOverview {
+  streak: Streak;
+  weeklyGoal: WeeklyGoalProgress;
+  badges: ProgressBadge[];
+  achievements: AchievementProgress[];
+}
+
 export interface UserPreference {
   focusMinutes: number;
   shortBreakMinutes: number;
@@ -245,6 +293,8 @@ export interface UserPreference {
   trackingPermissionGranted: boolean;
   trackingOnboardingCompleted: boolean;
   notificationsEnabled: boolean;
+  weeklyFocusGoalMinutes: number;
+  weeklyCompletedSessionsGoal: number;
   theme: ThemePreference;
   updatedAt: string;
 }

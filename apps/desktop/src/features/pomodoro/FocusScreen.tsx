@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 
 import { Button } from "../../components/ui/Button";
 import { Card, CardDescription, CardHeader, CardTitle } from "../../components/ui/Card";
@@ -10,7 +11,7 @@ import {
   startPomodoro,
   stopPomodoro,
 } from "../../lib/pomodoro";
-import { getUserPreferences, listSessions } from "../../lib/storage";
+import { getGamificationOverview, getUserPreferences, listSessions } from "../../lib/storage";
 import { usePomodoroPreferencesStore } from "../../stores/pomodoro-preferences-store";
 import { usePomodoroStore } from "../../stores/pomodoro-store";
 import type { StartPomodoroRequest } from "../../types/pomodoro";
@@ -51,6 +52,11 @@ export function FocusScreen() {
     queryKey: ["recent-sessions"],
     queryFn: () => listSessions(3),
   });
+  const gamificationQuery = useQuery({
+    queryKey: ["gamification-overview"],
+    queryFn: getGamificationOverview,
+  });
+  const refetchGamification = gamificationQuery.refetch;
 
   const startMutation = useMutation({
     mutationFn: (request: StartPomodoroRequest) => startPomodoro(request),
@@ -107,6 +113,14 @@ export function FocusScreen() {
     selectedPreset,
     snapshot.controlState,
   ]);
+
+  useEffect(() => {
+    if (snapshot.controlState === "running" || snapshot.controlState === "paused") {
+      return;
+    }
+
+    void refetchGamification();
+  }, [refetchGamification, snapshot.controlState, snapshot.sessionId]);
 
   const configuredPreset =
     snapshot.controlState === "idle"
@@ -271,6 +285,49 @@ export function FocusScreen() {
               ) : (
                 <p className="ft-text-muted">No sessions yet.</p>
               )}
+            </div>
+          </div>
+
+          <div className="ft-panel-muted px-4 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="ft-text-muted text-sm">Progress pulse</p>
+                <p className="mt-2 text-sm">
+                  {gamificationQuery.data
+                    ? `${gamificationQuery.data.streak.currentDays} day streak`
+                    : "Loading progress..."}
+                </p>
+              </div>
+              <Button asChild size="sm" variant="ghost">
+                <Link to="/gamification">Open</Link>
+              </Button>
+            </div>
+
+            <div className="mt-3 space-y-2 text-sm">
+              <p className="ft-text-muted">
+                {gamificationQuery.data
+                  ? gamificationQuery.data.streak.todayCompleted
+                    ? "Today already counts."
+                    : gamificationQuery.data.streak.isAtRisk
+                      ? "One focused session keeps the streak alive."
+                      : "The next focused day starts a new streak."
+                  : "Your weekly goals and achievements will appear here."}
+              </p>
+              {gamificationQuery.data ? (
+                <div className="flex flex-wrap gap-2">
+                  <span className="ft-brand-badge rounded-full px-2.5 py-1 text-[11px] font-medium">
+                    {gamificationQuery.data.weeklyGoal.completedGoalCount}/2 weekly goals
+                  </span>
+                  <span className="ft-brand-badge rounded-full px-2.5 py-1 text-[11px] font-medium">
+                    {
+                      gamificationQuery.data.achievements.filter(
+                        (achievement) => achievement.unlockedAt,
+                      ).length
+                    }{" "}
+                    achievements
+                  </span>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

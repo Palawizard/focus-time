@@ -21,8 +21,9 @@ Le socle applicatif est en place et les epics suivants sont deja livres :
 - App Tracker
 - historique des sessions
 - dashboard de stats
+- gamification legere
 
-Les prochains chantiers majeurs concernent la gamification, les preferences avancees, la fiabilite globale et le packaging beta.
+Les prochains chantiers majeurs concernent les preferences avancees, la fiabilite globale et le packaging beta.
 
 ## Stack retenue
 
