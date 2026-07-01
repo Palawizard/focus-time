@@ -1,5 +1,9 @@
 # Focus Time
 
+<p align="center">
+  <img src="apps/desktop/src-tauri/app-icon.svg" alt="Focus Time icon" width="128">
+</p>
+
 Focus Time est une application desktop locale pensee pour aider un utilisateur a mieux comprendre sa facon de travailler, et pas seulement a lancer un timer.
 
 Le produit combine cinq briques principales :
